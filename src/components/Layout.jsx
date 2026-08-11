@@ -306,7 +306,7 @@ export default function Layout({ children }) {
               style={{ display: 'flex', borderRadius: '50%', transition: 'opacity .15s' }}
               onMouseEnter={e => e.currentTarget.style.opacity = '.8'}
               onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
-              <Avatar name={user?.name} size={34} isPremium={isPremium} />
+              <Avatar name={user?.name} photoUrl={user?.photoUrl ?? user?.avatarUrl ?? user?.avatar} size={34} isPremium={isPremium} />
             </Link>
           </header>
 
