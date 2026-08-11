@@ -1,0 +1,304 @@
+import { useEffect, useState, useRef } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { modulesApi, videosApi } from '../lib/api.js';
+import { ArrowLeft, Play, BookmarkPlus, FileText, Loader, CheckCircle, Clock, Lock, ChevronRight } from 'lucide-react';
+import { useAuth } from '../lib/auth.jsx';
+
+function fmtDuration(secs) {
+  if (!secs) return null;
+  const m = Math.floor(secs / 60), s = secs % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+export default function ModuleDetail() {
+  const { id } = useParams();
+  const { user } = useAuth();
+  const [module, setModule]       = useState(null);
+  const [resources, setResources] = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [playingVideo, setPlayingVideo] = useState(null);
+  const [streamUrl, setStreamUrl]       = useState('');
+  const [streamLoading, setStreamLoading] = useState(false);
+  const [bookmarked, setBookmarked] = useState({});
+
+  const isPremium = ['ACTIVE', 'TRIAL'].includes(user?.subscriptionStatus);
+
+  useEffect(() => {
+    Promise.all([
+      modulesApi.getById(id).then(d => setModule(d.module ?? d)),
+      modulesApi.listResources(id)
+        .then(d => setResources(Array.isArray(d) ? d : (d?.resources ?? [])))
+        .catch(() => {}),
+    ]).finally(() => setLoading(false));
+  }, [id]);
+
+  const videoRef = useRef(null);
+
+  const playVideo = async (video) => {
+    if (!isPremium && !module?.isPreview) return;
+    setPlayingVideo(video);
+    setStreamUrl('');
+    setStreamLoading(true);
+    try {
+      const data = await videosApi.getStreamUrl(video.id);
+      const url = data.url ?? data.streamUrl ?? data.signedUrl ?? '';
+      setStreamUrl(url);
+      // Request fullscreen after the video element loads the new src
+      if (url) {
+        setTimeout(() => {
+          const el = videoRef.current;
+          if (!el) return;
+          if (el.requestFullscreen)            el.requestFullscreen();
+          else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+          else if (el.webkitEnterFullscreen)   el.webkitEnterFullscreen(); // iOS Safari
+        }, 300);
+      }
+    } catch {
+      setStreamUrl('');
+    } finally {
+      setStreamLoading(false);
+    }
+  };
+
+  const toggleBookmark = async (videoId, e) => {
+    e.stopPropagation(); e.preventDefault();
+    try {
+      await videosApi.bookmark(videoId);
+      setBookmarked(b => ({ ...b, [videoId]: !b[videoId] }));
+    } catch {}
+  };
+
+  if (loading) return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300 }}>
+      <Loader size={28} style={{ animation: 'spin 1s linear infinite', color: 'var(--green)' }} />
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+    </div>
+  );
+
+  if (!module) return (
+    <div style={{ textAlign: 'center', padding: 48, color: 'var(--muted)' }}>Module not found</div>
+  );
+
+  const videos    = module.videos ?? [];
+  const canAccess = isPremium || module.isPreview;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+
+      {/* Back */}
+      <Link to="/modules" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--muted)', fontSize: 14, fontWeight: 500 }}>
+        <ArrowLeft size={16} /> Back to Modules
+      </Link>
+
+      {/* Module header */}
+      <div className="fade-up" style={{ background: 'linear-gradient(130deg,var(--green-dark),var(--green))', borderRadius: 'var(--radius-lg)', padding: '24px 24px 20px', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position:'absolute', top:-30, right:-30, width:120, height:120, borderRadius:'50%', background:'rgba(255,255,255,.06)', pointerEvents:'none' }} />
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>{module.emoji ?? '📚'}</div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: -.4, marginBottom: 8 }}>{module.title}</h1>
+          {module.description && (
+            <p style={{ color: 'rgba(255,255,255,.75)', fontSize: 13.5, lineHeight: 1.6, marginBottom: 12 }}>{module.description}</p>
+          )}
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,.7)', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Play size={12} /> {videos.length} video{videos.length !== 1 ? 's' : ''}
+            </span>
+            {resources.length > 0 && (
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,.7)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <FileText size={12} /> {resources.length} resource{resources.length !== 1 ? 's' : ''}
+              </span>
+            )}
+            {module.isPreview && (
+              <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(255,255,255,.2)', color: '#fff', borderRadius: 20, padding: '2px 10px' }}>
+                Free preview
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* What to expect */}
+      {module.whatToExpect && (
+        <div className="fade-up" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px 20px' }}>
+          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 6 }}>What you'll learn</div>
+          <p style={{ fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.65 }}>{module.whatToExpect}</p>
+        </div>
+      )}
+
+      {/* Locked state */}
+      {!canAccess && (
+        <div className="fade-up" style={{ background: 'linear-gradient(135deg,#7C3AED,#9333EA)', borderRadius: 'var(--radius)', padding: '20px 24px', display: 'flex', gap: 16, alignItems: 'center' }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(255,255,255,.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Lock size={22} color="#fff" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, color: '#fff', fontSize: 15, marginBottom: 3 }}>Premium content</div>
+            <div style={{ color: 'rgba(255,255,255,.75)', fontSize: 13 }}>Subscribe to access all videos and resources in this module</div>
+          </div>
+          <Link to="/profile" style={{ background: '#fff', color: '#7C3AED', borderRadius: 20, padding: '8px 16px', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', flexShrink: 0 }}>
+            Upgrade
+          </Link>
+        </div>
+      )}
+
+      {/* Video player */}
+      {playingVideo && (
+        <div className="scale-in" style={{ background: '#000', borderRadius: 'var(--radius)', overflow: 'hidden', aspectRatio: '16/9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {streamLoading ? (
+            <Loader size={32} style={{ color: '#fff', animation: 'spin 1s linear infinite' }} />
+          ) : streamUrl ? (
+            <video ref={videoRef} src={streamUrl} controls autoPlay style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          ) : (
+            <div style={{ color: 'rgba(255,255,255,.6)', fontSize: 14, textAlign: 'center', padding: 24 }}>
+              <Lock size={28} style={{ margin: '0 auto 10px', opacity: .5 }} />
+              <div>Stream unavailable — video may still be processing</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Videos */}
+      {videos.length > 0 && (
+        <div className="fade-up">
+          <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: -.2, marginBottom: 12 }}>
+            Videos <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--muted)' }}>({videos.length})</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {videos.map((v, i) => {
+              const isPlaying = playingVideo?.id === v.id;
+              const isLocked  = !canAccess;
+              return (
+                <div key={v.id} onClick={() => !isLocked && playVideo(v)}
+                  className="card-lift"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 14,
+                    background: isPlaying ? 'var(--green-light)' : 'var(--surface)',
+                    border: `1.5px solid ${isPlaying ? 'var(--green)' : isLocked ? '#C4B5FD' : 'var(--border)'}`,
+                    borderRadius: 12, padding: '14px 16px',
+                    cursor: isLocked ? 'default' : 'pointer',
+                    transition: 'all .15s',
+                    position: 'relative', overflow: 'hidden',
+                  }}>
+
+                  {/* Watermark overlay for locked videos */}
+                  {isLocked && (
+                    <>
+                      {/* Diagonal watermark text */}
+                      <div style={{
+                        position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        overflow: 'hidden',
+                      }}>
+                        {/* Faint tiled watermark */}
+                        <div style={{
+                          position: 'absolute', inset: -20,
+                          display: 'flex', flexWrap: 'wrap', gap: '0 24px',
+                          alignItems: 'center', justifyContent: 'center',
+                          transform: 'rotate(-20deg)',
+                          opacity: .07,
+                        }}>
+                          {Array.from({ length: 6 }).map((_, k) => (
+                            <span key={k} style={{ fontSize: 11, fontWeight: 800, color: '#7C3AED', whiteSpace: 'nowrap', letterSpacing: 1, textTransform: 'uppercase' }}>
+                              🔒 Premium only
+                            </span>
+                          ))}
+                        </div>
+                        {/* Centered "Subscribe" pill */}
+                        <div style={{
+                          background: 'linear-gradient(135deg,rgba(124,58,237,.92),rgba(147,51,234,.92))',
+                          color: '#fff', fontSize: 10, fontWeight: 800,
+                          borderRadius: 20, padding: '3px 10px',
+                          letterSpacing: .6, textTransform: 'uppercase',
+                          display: 'flex', alignItems: 'center', gap: 4,
+                          boxShadow: '0 2px 8px rgba(124,58,237,.35)',
+                          position: 'absolute', top: 8, right: 8,
+                        }}>
+                          <Lock size={9} /> Subscribe
+                        </div>
+                      </div>
+                      {/* Purple tint overlay */}
+                      <div style={{ position: 'absolute', inset: 0, background: 'rgba(124,58,237,.04)', borderRadius: 12, pointerEvents: 'none', zIndex: 1 }} />
+                    </>
+                  )}
+
+                  {/* Index / play icon */}
+                  <div style={{
+                    width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
+                    background: isPlaying ? 'var(--green)' : isLocked ? '#EDE9FE' : 'var(--green-light)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    position: 'relative', zIndex: 3,
+                  }}>
+                    {isPlaying
+                      ? <CheckCircle size={16} color="#fff" />
+                      : isLocked
+                        ? <Lock size={14} style={{ color: 'var(--muted)' }} />
+                        : <Play size={14} fill="var(--green)" color="var(--green)" />}
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: isPlaying ? 'var(--green)' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {i + 1}. {v.title}
+                    </div>
+                    <div style={{ display: 'flex', gap: 10, marginTop: 3 }}>
+                      {fmtDuration(v.durationSecs) && (
+                        <span style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                          <Clock size={11} /> {fmtDuration(v.durationSecs)}
+                        </span>
+                      )}
+                      {v.type && (
+                        <span style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--border-light)', borderRadius: 4, padding: '1px 6px', fontWeight: 500 }}>
+                          {v.type.replace('_', ' ')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {!isLocked && (
+                    <button onClick={e => toggleBookmark(v.id, e)}
+                      style={{ background: 'none', border: 'none', color: bookmarked[v.id] ? 'var(--green)' : 'var(--muted)', display: 'flex', padding: 4, borderRadius: 6, flexShrink: 0, cursor: 'pointer' }}>
+                      <BookmarkPlus size={16} fill={bookmarked[v.id] ? 'var(--green)' : 'none'} />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {videos.length === 0 && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '40px 20px', textAlign: 'center' }}>
+          <Play size={32} style={{ color: 'var(--muted)', margin: '0 auto 12px', opacity: .4 }} />
+          <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--muted)' }}>No videos yet</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4, opacity: .7 }}>Check back soon — content is being added</div>
+        </div>
+      )}
+
+      {/* Resources */}
+      {resources.length > 0 && (
+        <div className="fade-up">
+          <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: -.2, marginBottom: 12 }}>
+            Resources <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--muted)' }}>({resources.length})</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {resources.map(r => (
+              <a key={r.id} href={r.url ?? r.fileUrl ?? '#'} target="_blank" rel="noopener noreferrer"
+                className="card-lift"
+                style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: '14px 16px' }}>
+                <div style={{ width: 38, height: 38, borderRadius: 10, background: 'var(--sky-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <FileText size={18} style={{ color: 'var(--sky)' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{r.title ?? r.name}</div>
+                  {r.type && <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{r.type}</div>}
+                </div>
+                <ChevronRight size={15} style={{ color: 'var(--muted)', opacity: .5 }} />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
