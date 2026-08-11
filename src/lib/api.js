@@ -136,6 +136,13 @@ export const paymentsApi = {
   myHistory: () => request('/payments/my-history'),
 };
 
+// ── Manual Payments ───────────────────────────────────────────────────────────
+export const manualPaymentsApi = {
+  plans:   ()      => request('/manual-payments/plans'),
+  my:      ()      => request('/manual-payments/my'),
+  // submit uses raw fetch (multipart) — handled directly in ManualPayment.jsx
+};
+
 // ── Announcements ─────────────────────────────────────────────────────────────
 export const announcementsApi = {
   getActive: () => request('/announcements'),

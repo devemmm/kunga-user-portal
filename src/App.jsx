@@ -9,6 +9,7 @@ import ModuleDetail from './pages/ModuleDetail.jsx';
 import Progress from './pages/Progress.jsx';
 import AskGad from './pages/AskGad.jsx';
 import Profile from './pages/Profile.jsx';
+import ManualPayment from './pages/ManualPayment.jsx';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="/progress" element={<PrivateRoute><Progress /></PrivateRoute>} />
           <Route path="/ask-gad" element={<PrivateRoute><AskGad /></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+          <Route path="/manual-payment" element={<PrivateRoute><ManualPayment /></PrivateRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

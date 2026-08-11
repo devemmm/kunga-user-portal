@@ -194,6 +194,25 @@ export default function Profile() {
                   </div>
                 ))}
               </div>
+
+              {/* Manual payment CTA */}
+              <div style={{
+                marginTop: 16, padding: '16px 20px',
+                background: 'linear-gradient(135deg,#0D3D22,#1B5E3B)',
+                borderRadius: 12, color: 'white',
+              }}>
+                <div style={{ fontWeight: 700, marginBottom: 4 }}>Can't pay online?</div>
+                <div style={{ fontSize: 13, opacity: 0.85, marginBottom: 14, lineHeight: 1.5 }}>
+                  Transfer directly to our bank account, upload your receipt, and we'll activate your account within 24 hours.
+                </div>
+                <a href="/manual-payment" style={{
+                  display: 'inline-block', padding: '8px 18px', borderRadius: 8,
+                  background: 'white', color: '#0D3D22', fontWeight: 700, fontSize: 13,
+                  textDecoration: 'none',
+                }}>
+                  Pay via bank transfer →
+                </a>
+              </div>
             </div>
           )}
         </div>

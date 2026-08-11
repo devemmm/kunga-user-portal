@@ -335,32 +335,64 @@ export default function Home() {
 
       {/* ── Upgrade banner (free users only) ── */}
       {!isPremium && (
-        <div className="fade-up" style={{
-          background: 'linear-gradient(135deg,#6D28D9,#7C3AED)',
-          borderRadius: 16, padding: '18px 20px',
-          display: 'flex', alignItems: 'center', gap: 14,
-          boxShadow: '0 6px 20px rgba(109,40,217,.22)',
-          animationDelay: '80ms',
-        }}>
+        <div className="fade-up" style={{ animationDelay: '80ms' }}>
+          {/* Header */}
           <div style={{
-            width: 44, height: 44, borderRadius: 12,
-            background: 'rgba(255,255,255,.14)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            background: 'linear-gradient(135deg,#6D28D9,#7C3AED)',
+            borderRadius: '16px 16px 0 0', padding: '16px 20px',
+            display: 'flex', alignItems: 'center', gap: 12,
           }}>
-            <Sparkles size={20} color="#fff" />
+            <div style={{
+              width: 40, height: 40, borderRadius: 10,
+              background: 'rgba(255,255,255,.15)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <Sparkles size={18} color="#fff" />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Unlock Premium Access</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.72)' }}>All modules · Dr. Gad Q&A · Full progress tracking</div>
+            </div>
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, color: '#fff', marginBottom: 2 }}>Unlock Premium</div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.72)' }}>All modules, Dr. Gad Q&A, and full progress tracking</div>
-          </div>
-          <Link to="/profile" style={{
-            background: '#fff', color: '#7C3AED',
-            borderRadius: 20, padding: '8px 16px',
-            fontWeight: 700, fontSize: 12,
-            whiteSpace: 'nowrap', flexShrink: 0,
+
+          {/* Two payment options */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 1fr',
+            border: '1px solid var(--border)', borderTop: 'none',
+            borderRadius: '0 0 16px 16px', overflow: 'hidden',
           }}>
-            View plans
-          </Link>
+            {/* Online */}
+            <Link to="/profile" style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+              padding: '16px 12px', textDecoration: 'none',
+              background: 'var(--surface)', borderRight: '1px solid var(--border)',
+            }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 10, background: '#ede9fe',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Star size={16} color="#7C3AED" />
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', textAlign: 'center' }}>Pay online</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', lineHeight: 1.4 }}>Card or mobile money</div>
+            </Link>
+
+            {/* Bank transfer */}
+            <Link to="/manual-payment" style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+              padding: '16px 12px', textDecoration: 'none',
+              background: 'var(--surface)',
+            }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: 10, background: '#d1fae5',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <ArrowRight size={16} color="#059669" />
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', textAlign: 'center' }}>Bank transfer</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', lineHeight: 1.4 }}>Upload your receipt</div>
+            </Link>
+          </div>
         </div>
       )}
 
