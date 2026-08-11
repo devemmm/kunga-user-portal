@@ -6,7 +6,7 @@ import { notificationsApi, announcementsApi } from '../lib/api.js';
 import {
   Home, BookOpen, TrendingUp, MessageCircle, User, LogOut,
   Menu, X, Star, ChevronRight, Sparkles, PanelLeftClose, PanelLeftOpen,
-  CreditCard, Settings, Bell, CheckSquare,
+  CreditCard, Settings, Bell, CheckSquare, ClipboardList,
 } from 'lucide-react';
 
 // NAV keys — labels resolved at render time via t()
@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { to: '/modules',  icon: BookOpen,      tKey: 'nav.modules' },
   { to: '/progress', icon: TrendingUp,    tKey: 'nav.progress' },
   { to: '/routine',  icon: CheckSquare,   tKey: 'nav.routine' },
+  { to: '/assessment', icon: ClipboardList, tKey: 'nav.assessment' },
   { to: '/ask-gad',  icon: MessageCircle, tKey: 'nav.askGad' },
   { to: '/payments', icon: CreditCard,    tKey: 'nav.payments' },
   { to: '/profile',  icon: User,          tKey: 'nav.profile' },

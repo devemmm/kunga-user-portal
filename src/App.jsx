@@ -16,6 +16,8 @@ import Settings from './pages/Settings.jsx';
 import ManualPayment from './pages/ManualPayment.jsx';
 import TodaysRoutine from './pages/TodaysRoutine.jsx';
 import Notifications from './pages/Notifications.jsx';
+import MilestoneReport from './pages/MilestoneReport.jsx';
+import ChildAssessment from './pages/ChildAssessment.jsx';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -48,6 +50,8 @@ export default function App() {
               <Route path="/manual-payment" element={<PrivateRoute><ManualPayment /></PrivateRoute>} />
               <Route path="/routine" element={<PrivateRoute><TodaysRoutine /></PrivateRoute>} />
               <Route path="/notifications" element={<PrivateRoute><Notifications /></PrivateRoute>} />
+              <Route path="/milestones" element={<PrivateRoute><MilestoneReport /></PrivateRoute>} />
+              <Route path="/assessment" element={<PrivateRoute><ChildAssessment /></PrivateRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>

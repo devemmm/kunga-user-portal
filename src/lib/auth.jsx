@@ -22,9 +22,10 @@ function applyLangFromPrefs(prefs) {
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser]   = useState(null);
-  const [prefs, setPrefs] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user,         setUser]         = useState(null);
+  const [childProfile, setChildProfile] = useState(null);
+  const [prefs,        setPrefs]        = useState(null);
+  const [loading,      setLoading]      = useState(true);
 
   // Core session refresh — re-fetches /auth/me and updates user state.
   // /auth/me returns { user, childProfile, subscription, preferences }
@@ -34,6 +35,7 @@ export function AuthProvider({ children }) {
     try {
       const res = await authApi.me();
       setUser(res?.user ?? res);
+      if (res?.childProfile) setChildProfile(res.childProfile);
     } catch { /* network error — keep stale state */ }
   }, []);
 
@@ -49,6 +51,7 @@ export function AuthProvider({ children }) {
           // extract .user so the shape matches what login stores
           const res = userRes.value;
           setUser(res?.user ?? res);
+          if (res?.childProfile) setChildProfile(res.childProfile);
         } else setUser(null);
         if (prefsRes.status === 'fulfilled') {
           const p = prefsRes.value?.preferences ?? null;
@@ -125,6 +128,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setToken(null, null);
     setUser(null);
+    setChildProfile(null);
     setPrefs(null);
   };
 
@@ -132,6 +136,7 @@ export function AuthProvider({ children }) {
     const res = await authApi.me();
     const u = res?.user ?? res;
     setUser(u);
+    if (res?.childProfile) setChildProfile(res.childProfile);
     return u;
   };
 
@@ -157,7 +162,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{
-      user, prefs, loading,
+      user, childProfile, prefs, loading,
       login, register, googleSignIn, completeMfaLogin, logout,
       refreshUser, refreshPrefs, updatePrefs,
     }}>

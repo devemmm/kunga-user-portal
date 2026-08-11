@@ -141,7 +141,7 @@ function ModuleCard({ m, index }) {
 export default function Home() {
   const { user } = useAuth();
   const { t } = useLang();
-  const isPremium = ['ACTIVE', 'TRIAL'].includes(user?.subscriptionStatus);
+  const isPremium = ['ACTIVE', 'TRIAL', 'active', 'trial'].includes(user?.subscriptionStatus);
 
   const [modules, setModules]   = useState([]);
   const [announcements, setAnn] = useState([]);

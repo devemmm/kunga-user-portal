@@ -100,7 +100,7 @@ export default function TodaysRoutine() {
   const { user } = useAuth();
   const { t }    = useLang();
 
-  const isPremium = ['ACTIVE', 'TRIAL'].includes(user?.subscriptionStatus);
+  const isPremium = ['ACTIVE', 'TRIAL', 'active', 'trial'].includes(user?.subscriptionStatus);
 
   const [tasks,    setTasks]    = useState(mergeWithTemplate([]));
   const [loading,  setLoading]  = useState(true);

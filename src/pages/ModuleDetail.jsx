@@ -30,7 +30,7 @@ export default function ModuleDetail() {
   const [streamLoading, setStreamLoading] = useState(false);
   const [bookmarked, setBookmarked] = useState({});
 
-  const isPremium = ['ACTIVE', 'TRIAL'].includes(user?.subscriptionStatus);
+  const isPremium = ['ACTIVE', 'TRIAL', 'active', 'trial'].includes(user?.subscriptionStatus);
 
   useEffect(() => {
     Promise.all([

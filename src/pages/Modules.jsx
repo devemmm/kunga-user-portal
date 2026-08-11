@@ -23,7 +23,7 @@ export default function Modules() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const isPremium = ['ACTIVE', 'TRIAL'].includes(user?.subscriptionStatus);
+  const isPremium = ['ACTIVE', 'TRIAL', 'active', 'trial'].includes(user?.subscriptionStatus);
 
   useEffect(() => {
     Promise.all([

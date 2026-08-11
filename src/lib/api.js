@@ -131,16 +131,46 @@ export const progressApi = {
 
 // ── Assessments ───────────────────────────────────────────────────────────────
 export const assessmentsApi = {
-  list: () => request('/assessments'),
-  getById: (id) => request(`/assessments/${id}`),
-  submit: (id, data) => request(`/assessments/${id}/submit`, { method: 'POST', body: JSON.stringify(data) }),
-  history: () => request('/assessments/history'),
+  list:    ()         => request('/assessments'),
+  getById: (id)       => request(`/assessments/${id}`),
+  create:  (data)     => request('/assessments', { method: 'POST', body: JSON.stringify(data) }),
+  submit:  (id, data) => request(`/assessments/${id}/submit`, { method: 'POST', body: JSON.stringify(data) }),
+  history: ()         => request('/assessments/history'),
 };
 
 // ── Ask Dr. Gad ───────────────────────────────────────────────────────────────
 export const askGadApi = {
-  list: () => request('/ask-gad'),
+  list:   ()     => request('/ask-gad'),
   submit: (data) => request('/ask-gad', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Proxy upload: browser → our API → MinIO (avoids CORS on direct browser→MinIO PUT)
+  uploadMedia: (file, onProgress) => new Promise((resolve, reject) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${(import.meta.env.VITE_API_URL ?? '/api/v1')}/ask-gad/upload`);
+
+    // Auth header
+    const token = localStorage.getItem('kb_token');
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.setRequestHeader('X-Platform', 'web');
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch { resolve({}); }
+      } else {
+        try { reject(new Error(JSON.parse(xhr.responseText)?.message ?? `Upload failed (${xhr.status})`)); }
+        catch { reject(new Error(`Upload failed (${xhr.status})`)); }
+      }
+    };
+    xhr.onerror = () => reject(new Error('Upload failed — please check your connection'));
+    xhr.send(formData);
+  }),
 };
 
 // ── Subscriptions ─────────────────────────────────────────────────────────────
@@ -166,6 +196,17 @@ export const routineApi = {
   toggle:     (date, category, taskKey, completed) =>
     request(`/routine/${date}/${category}/${taskKey}`, { method: 'PATCH', body: JSON.stringify({ completed }) }),
   streak:     ()                          => request('/routine/streak/current'),
+};
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+export const usersApi = {
+  getProgressSummary: () => request('/users/me/progress-summary'),
+};
+
+// ── Milestones ────────────────────────────────────────────────────────────────
+export const milestonesApi = {
+  list:   ()     => request('/milestones'),
+  submit: (data) => request('/milestones', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // ── Notifications ─────────────────────────────────────────────────────────────
