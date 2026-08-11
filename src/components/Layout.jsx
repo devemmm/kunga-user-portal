@@ -1,21 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { NavLink, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
+import { useLang } from '../lib/i18n.jsx';
+import { notificationsApi, announcementsApi } from '../lib/api.js';
 import {
   Home, BookOpen, TrendingUp, MessageCircle, User, LogOut,
-  Menu, X, Star, ChevronRight, Sparkles, PanelLeftClose, PanelLeftOpen
+  Menu, X, Star, ChevronRight, Sparkles, PanelLeftClose, PanelLeftOpen,
+  CreditCard, Settings, Bell, CheckSquare, ClipboardList,
 } from 'lucide-react';
 
-const NAV = [
-  { to: '/',         icon: Home,          label: 'Home',        end: true },
-  { to: '/modules',  icon: BookOpen,       label: 'Modules' },
-  { to: '/progress', icon: TrendingUp,     label: 'Progress' },
-  { to: '/ask-gad',  icon: MessageCircle,  label: 'Ask Dr. Gad' },
-  { to: '/profile',  icon: User,           label: 'Profile' },
+// NAV keys — labels resolved at render time via t()
+const NAV_ITEMS = [
+  { to: '/',         icon: Home,         tKey: 'nav.home',        end: true },
+  { to: '/modules',  icon: BookOpen,      tKey: 'nav.modules' },
+  { to: '/progress', icon: TrendingUp,    tKey: 'nav.progress' },
+  { to: '/routine',  icon: CheckSquare,   tKey: 'nav.routine' },
+  { to: '/assessment', icon: ClipboardList, tKey: 'nav.assessment' },
+  { to: '/ask-gad',  icon: MessageCircle, tKey: 'nav.askGad' },
+  { to: '/payments', icon: CreditCard,    tKey: 'nav.payments' },
+  { to: '/profile',  icon: User,          tKey: 'nav.profile' },
+  { to: '/settings', icon: Settings,      tKey: 'nav.settings' },
 ];
 
-function Avatar({ name, size = 36, isPremium }) {
+function Avatar({ name, photoUrl, size = 36, isPremium }) {
   const initials = name ? name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : 'U';
+  const [imgErr, setImgErr] = useState(false);
+  const showImg = photoUrl && !imgErr;
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%', flexShrink: 0,
@@ -25,13 +35,17 @@ function Avatar({ name, size = 36, isPremium }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       color: '#fff', fontWeight: 700, fontSize: size * 0.38,
       boxShadow: '0 2px 8px rgba(0,0,0,.18)', letterSpacing: .5,
+      overflow: 'hidden', position: 'relative',
     }}>
-      {initials}
+      {showImg
+        ? <img src={photoUrl} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} onError={() => setImgErr(true)} />
+        : initials}
     </div>
   );
 }
 
 function SidebarContent({ user, isPremium, onClose, onLogout, collapsed, onToggleCollapse, isDesktop }) {
+  const { t } = useLang();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
 
@@ -79,14 +93,14 @@ function SidebarContent({ user, isPremium, onClose, onLogout, collapsed, onToggl
           onMouseLeave={e => e.currentTarget.style.opacity = '1'}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Avatar name={user?.name} size={38} isPremium={isPremium} />
+            <Avatar name={user?.name} photoUrl={user?.photoUrl ?? user?.avatarUrl ?? user?.avatar} size={38} isPremium={isPremium} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)' }}>
                 {user?.name ?? 'User'}
               </div>
               <div style={{ fontSize: 11, marginTop: 1, display: 'flex', alignItems: 'center', gap: 3,
                 color: isPremium ? '#92400E' : 'var(--green-mid)', fontWeight: 600 }}>
-                {isPremium ? <><Star size={10} fill="currentColor" /> Premium</> : 'Free plan'}
+                {isPremium ? <><Star size={10} fill="currentColor" /> {t('nav.premium')}</> : t('nav.freePlan')}
               </div>
             </div>
           </div>
@@ -96,20 +110,22 @@ function SidebarContent({ user, isPremium, onClose, onLogout, collapsed, onToggl
       {/* Collapsed user avatar */}
       {collapsed && (
         <Link to="/profile" style={{ display: 'flex', justifyContent: 'center', margin: '0 0 8px', padding: '6px 0' }}>
-          <Avatar name={user?.name} size={36} isPremium={isPremium} />
+          <Avatar name={user?.name} photoUrl={user?.photoUrl ?? user?.avatarUrl ?? user?.avatar} size={36} isPremium={isPremium} />
         </Link>
       )}
 
       {/* Nav section label */}
       {!collapsed && (
         <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--muted-light)', letterSpacing: 1, textTransform: 'uppercase', padding: '8px 20px 4px' }}>
-          Menu
+          {t('nav.menu')}
         </div>
       )}
 
       {/* Nav */}
       <nav style={{ flex: 1, padding: collapsed ? '4px 8px' : '4px 12px', overflowY: 'auto' }}>
-        {NAV.map(({ to, icon: Icon, label, end }) => (
+        {NAV_ITEMS.map(({ to, icon: Icon, tKey, end }) => {
+          const label = t(tKey);
+          return (
           <NavLink key={to} to={to} end={end}
             onClick={onClose}
             title={collapsed ? label : undefined}
@@ -136,7 +152,8 @@ function SidebarContent({ user, isPremium, onClose, onLogout, collapsed, onToggl
               </>
             )}
           </NavLink>
-        ))}
+          );
+        })}
       </nav>
 
       {/* Sign out */}
@@ -156,7 +173,7 @@ function SidebarContent({ user, isPremium, onClose, onLogout, collapsed, onToggl
           <span style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <LogOut size={16} />
           </span>
-          {!collapsed && 'Sign out'}
+          {!collapsed && t('nav.signOut')}
         </button>
       </div>
     </div>
@@ -165,15 +182,38 @@ function SidebarContent({ user, isPremium, onClose, onLogout, collapsed, onToggl
 
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
+  const { t } = useLang();
   const navigate = useNavigate();
   const location = useLocation();
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [drawerOpen, setDrawerOpen]       = useState(false);
+  const [collapsed, setCollapsed]         = useState(false);
+  const [unreadCount, setUnreadCount]     = useState(0);
+  const [banner, setBanner]               = useState(null); // active announcement banner
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const isPremium = ['ACTIVE', 'TRIAL'].includes(user?.subscriptionStatus);
   const handleLogout = () => { logout(); navigate('/login'); };
 
-  const pageLabel = NAV.find(n => n.end ? location.pathname === n.to : location.pathname.startsWith(n.to))?.label ?? '';
+  // Fetch unread notification count + active banner on mount
+  const loadMeta = useCallback(async () => {
+    try {
+      const [notifRes, bannerRes] = await Promise.all([
+        notificationsApi.list().catch(() => null),
+        announcementsApi.getBanner().catch(() => null),
+      ]);
+      if (notifRes?.notifications) {
+        const stored = (() => { try { return new Set(JSON.parse(sessionStorage.getItem('kb_read_notif_ids') ?? '[]')); } catch { return new Set(); } })();
+        const unread = notifRes.notifications.filter(n => !stored.has(String(n.id)) && n.read !== true).length;
+        setUnreadCount(unread);
+      }
+      if (bannerRes?.id) setBanner(bannerRes);
+    } catch {}
+  }, []);
+
+  useEffect(() => { loadMeta(); }, [loadMeta]);
+
+  const activeItem = NAV_ITEMS.find(n => n.end ? location.pathname === n.to : location.pathname.startsWith(n.to));
+  const pageLabel = activeItem ? t(activeItem.tKey) : '';
   const sidebarW = collapsed ? 64 : 252;
 
   return (
@@ -243,18 +283,52 @@ export default function Layout({ children }) {
 
             {isPremium && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'var(--gold-light)', border: '1px solid #FCD34D', borderRadius: 20, padding: '4px 10px', fontSize: 11, fontWeight: 700, color: '#92400E' }}>
-                <Sparkles size={11} /> Premium
+                <Sparkles size={11} /> {t('nav.premium')}
               </div>
             )}
+
+            {/* Notification bell */}
+            <Link to="/notifications" title={t('nav.notifications')}
+              onClick={() => setUnreadCount(0)}
+              style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: 10, background: 'var(--border-light)', border: '1px solid var(--border)', color: 'var(--text)', transition: 'opacity .15s' }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '.75'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            >
+              <Bell size={17} />
+              {unreadCount > 0 && (
+                <span style={{ position: 'absolute', top: -4, right: -4, minWidth: 17, height: 17, borderRadius: 99, background: 'var(--green)', color: '#fff', fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', border: '2px solid var(--surface)' }}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Link>
 
             {/* Avatar → navigates to /profile */}
             <Link to="/profile" title="My profile"
               style={{ display: 'flex', borderRadius: '50%', transition: 'opacity .15s' }}
               onMouseEnter={e => e.currentTarget.style.opacity = '.8'}
               onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
-              <Avatar name={user?.name} size={34} isPremium={isPremium} />
+              <Avatar name={user?.name} photoUrl={user?.photoUrl ?? user?.avatarUrl ?? user?.avatar} size={34} isPremium={isPremium} />
             </Link>
           </header>
+
+          {/* Announcement banner */}
+          {banner && !bannerDismissed && (
+            <div style={{ background: 'linear-gradient(90deg,#fffbeb,#fef3c7)', borderBottom: '1px solid #FCD34D', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 16 }}>📣</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontWeight: 700, fontSize: 13, color: '#78350F' }}>{banner.title}</span>
+                {banner.body && <span style={{ fontSize: 12, color: '#92400E', marginLeft: 8 }}>{banner.body}</span>}
+              </div>
+              <button
+                onClick={async () => {
+                  setBannerDismissed(true);
+                  try { await announcementsApi.dismiss(banner.id); } catch {}
+                }}
+                style={{ background: 'none', border: 'none', color: '#92400E', cursor: 'pointer', fontSize: 18, padding: 4, opacity: .7, flexShrink: 0 }}
+                title="Dismiss"
+              >×</button>
+            </div>
+          )}
 
           {/* Content */}
           <main style={{ flex: 1, padding: '28px 24px', maxWidth: 960, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>

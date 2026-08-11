@@ -74,14 +74,31 @@ async function request(path, opts = {}) {
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 export const authApi = {
-  login: (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password, platform: 'web' }) }),
-  register: (name, email, password) => request('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password, platform: 'web' }) }),
-  googleAuth: (idToken) => request('/auth/google', { method: 'POST', body: JSON.stringify({ idToken, platform: 'web' }) }),
-  forgotPassword: (email) => request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
-  resetPassword: (token, newPassword) => request('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, newPassword }) }),
-  me: () => request('/auth/me'),
-  updateProfile: (data) => request('/auth/me', { method: 'PATCH', body: JSON.stringify(data) }),
-  changePassword: (data) => request('/auth/change-password', { method: 'POST', body: JSON.stringify(data) }),
+  login:           (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password, platform: 'web' }) }),
+  register:        (name, email, password) => request('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password, platform: 'web' }) }),
+  googleAuth:      (idToken) => request('/auth/google', { method: 'POST', body: JSON.stringify({ idToken, platform: 'web' }) }),
+  forgotPassword:  (email) => request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+  resetPassword:   (token, newPassword) => request('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, newPassword }) }),
+  me:              () => request('/auth/me'),
+  updateProfile:   (data) => request('/auth/me', { method: 'PATCH', body: JSON.stringify(data) }),
+  changePassword:  (data) => request('/auth/change-password', { method: 'POST', body: JSON.stringify(data) }),
+  updatePhoto:     (formData) => request('/auth/me/photo', { method: 'POST', body: formData, headers: {} }),
+  removePhoto:     () => request('/auth/me/photo', { method: 'DELETE' }),
+  // MFA login flow
+  mfaVerify:  (mfaToken, otp) => request('/auth/mfa/verify',  { method: 'POST', body: JSON.stringify({ mfaToken, otp }) }),
+  mfaResend:  (mfaToken)      => request('/auth/mfa/resend',  { method: 'POST', body: JSON.stringify({ mfaToken }) }),
+  // MFA setup (enable)
+  mfaSetupSend:   ()          => request('/auth/mfa/setup/send',   { method: 'POST', body: '{}' }),
+  mfaSetupVerify: (otp)       => request('/auth/mfa/setup/verify', { method: 'POST', body: JSON.stringify({ otp }) }),
+  // MFA disable
+  mfaDisableSend:   ()        => request('/auth/mfa/disable/send',   { method: 'POST', body: '{}' }),
+  mfaDisableVerify: (otp)     => request('/auth/mfa/disable/verify', { method: 'POST', body: JSON.stringify({ otp }) }),
+};
+
+// ── Preferences ───────────────────────────────────────────────────────────────
+export const preferencesApi = {
+  get:    ()     => request('/preferences'),
+  update: (data) => request('/preferences', { method: 'PATCH', body: JSON.stringify(data) }),
 };
 
 // ── Modules ───────────────────────────────────────────────────────────────────
@@ -114,16 +131,46 @@ export const progressApi = {
 
 // ── Assessments ───────────────────────────────────────────────────────────────
 export const assessmentsApi = {
-  list: () => request('/assessments'),
-  getById: (id) => request(`/assessments/${id}`),
-  submit: (id, data) => request(`/assessments/${id}/submit`, { method: 'POST', body: JSON.stringify(data) }),
-  history: () => request('/assessments/history'),
+  list:    ()         => request('/assessments'),
+  getById: (id)       => request(`/assessments/${id}`),
+  create:  (data)     => request('/assessments', { method: 'POST', body: JSON.stringify(data) }),
+  submit:  (id, data) => request(`/assessments/${id}/submit`, { method: 'POST', body: JSON.stringify(data) }),
+  history: ()         => request('/assessments/history'),
 };
 
 // ── Ask Dr. Gad ───────────────────────────────────────────────────────────────
 export const askGadApi = {
-  list: () => request('/ask-gad'),
+  list:   ()     => request('/ask-gad'),
   submit: (data) => request('/ask-gad', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Proxy upload: browser → our API → MinIO (avoids CORS on direct browser→MinIO PUT)
+  uploadMedia: (file, onProgress) => new Promise((resolve, reject) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${(import.meta.env.VITE_API_URL ?? '/api/v1')}/ask-gad/upload`);
+
+    // Auth header
+    const token = localStorage.getItem('kb_token');
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.setRequestHeader('X-Platform', 'web');
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch { resolve({}); }
+      } else {
+        try { reject(new Error(JSON.parse(xhr.responseText)?.message ?? `Upload failed (${xhr.status})`)); }
+        catch { reject(new Error(`Upload failed (${xhr.status})`)); }
+      }
+    };
+    xhr.onerror = () => reject(new Error('Upload failed — please check your connection'));
+    xhr.send(formData);
+  }),
 };
 
 // ── Subscriptions ─────────────────────────────────────────────────────────────
@@ -136,8 +183,40 @@ export const paymentsApi = {
   myHistory: () => request('/payments/my-history'),
 };
 
+// ── Manual Payments ───────────────────────────────────────────────────────────
+export const manualPaymentsApi = {
+  plans:   ()      => request('/manual-payments/plans'),
+  my:      ()      => request('/manual-payments/my'),
+  // submit uses raw fetch (multipart) — handled directly in ManualPayment.jsx
+};
+
+// ── Routine ───────────────────────────────────────────────────────────────────
+export const routineApi = {
+  getDate:    (date)                      => request(`/routine/${date}`),
+  toggle:     (date, category, taskKey, completed) =>
+    request(`/routine/${date}/${category}/${taskKey}`, { method: 'PATCH', body: JSON.stringify({ completed }) }),
+  streak:     ()                          => request('/routine/streak/current'),
+};
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+export const usersApi = {
+  getProgressSummary: () => request('/users/me/progress-summary'),
+};
+
+// ── Milestones ────────────────────────────────────────────────────────────────
+export const milestonesApi = {
+  list:   ()     => request('/milestones'),
+  submit: (data) => request('/milestones', { method: 'POST', body: JSON.stringify(data) }),
+};
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+export const notificationsApi = {
+  list: () => request('/users/me/notifications'),
+};
+
 // ── Announcements ─────────────────────────────────────────────────────────────
 export const announcementsApi = {
-  getActive: () => request('/announcements'),
-  dismiss: (id) => request(`/announcements/${id}/dismiss`, { method: 'POST', body: '{}' }),
+  getActive:   ()    => request('/announcements'),
+  getBanner:   ()    => request('/announcements/active-banner'),
+  dismiss:     (id)  => request(`/announcements/${id}/dismiss`, { method: 'POST', body: '{}' }),
 };
