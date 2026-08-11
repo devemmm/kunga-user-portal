@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react';
 import { askGadApi } from '../lib/api.js';
 import { useAuth } from '../lib/auth.jsx';
+import { useLang } from '../lib/i18n.jsx';
 import { MessageCircle, Send, Clock, CheckCircle, AlertCircle, Loader, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-const STATUS_CONFIG = {
-  PENDING:    { label: 'Pending',    color: '#d97706', bg: '#fef3c7', icon: Clock },
-  IN_REVIEW:  { label: 'In Review',  color: '#7c3aed', bg: '#ede9fe', icon: Clock },
-  ANSWERED:   { label: 'Answered',   color: '#16a34a', bg: '#dcfce7', icon: CheckCircle },
-  ESCALATED:  { label: 'Escalated',  color: '#dc2626', bg: '#fee2e2', icon: AlertCircle },
+const STATUS_CONFIG_KEYS = {
+  PENDING:   { tKey: 'askGad.statusPending',   color: '#d97706', bg: '#fef3c7', icon: Clock },
+  IN_REVIEW: { tKey: 'askGad.statusInReview',  color: '#7c3aed', bg: '#ede9fe', icon: Clock },
+  ANSWERED:  { tKey: 'askGad.statusAnswered',  color: '#16a34a', bg: '#dcfce7', icon: CheckCircle },
+  ESCALATED: { tKey: 'askGad.statusEscalated', color: '#dc2626', bg: '#fee2e2', icon: AlertCircle },
 };
 
 export default function AskGad() {
   const { user } = useAuth();
+  const { t } = useLang();
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -52,17 +54,17 @@ export default function AskGad() {
   if (!isPremium) return (
     <div>
       <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700 }}>Ask Dr. Gad</h1>
-        <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>Get expert answers from Dr. Gad</p>
+        <h1 style={{ fontSize: 22, fontWeight: 700 }}>{t('askGad.title')}</h1>
+        <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>{t('askGad.subtitle')}</p>
       </div>
       <div style={{ textAlign: 'center', padding: '48px 24px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' }}>
         <Lock size={36} style={{ color: 'var(--muted)', margin: '0 auto 16px' }} />
-        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Premium Feature</h2>
+        <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{t('askGad.locked')}</h2>
         <p style={{ color: 'var(--muted)', fontSize: 14, maxWidth: 300, margin: '0 auto 20px' }}>
-          Subscribe to get access to Ask Dr. Gad and receive expert answers about your child's development.
+          {t('askGad.lockedDesc')}
         </p>
-        <Link to="/profile" style={{ display: 'inline-block', background: 'var(--green)', color: '#fff', padding: '10px 24px', borderRadius: 8, fontWeight: 600, fontSize: 14 }}>
-          View subscription plans
+        <Link to="/payments" style={{ display: 'inline-block', background: 'var(--green)', color: '#fff', padding: '10px 24px', borderRadius: 8, fontWeight: 600, fontSize: 14 }}>
+          {t('askGad.upgrade')}
         </Link>
       </div>
     </div>
@@ -72,14 +74,14 @@ export default function AskGad() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700 }}>Ask Dr. Gad</h1>
-          <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>Submit questions and get expert answers</p>
+          <h1 style={{ fontSize: 22, fontWeight: 700 }}>{t('askGad.title')}</h1>
+          <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>{t('askGad.subtitle')}</p>
         </div>
         <button
           onClick={() => setShowForm(s => !s)}
           style={{ background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 16px', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}
         >
-          <Send size={14} /> Ask a question
+          <Send size={14} /> {t('askGad.send')}
         </button>
       </div>
 
@@ -92,44 +94,44 @@ export default function AskGad() {
       {/* Question form */}
       {showForm && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', marginBottom: 20 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Submit a Question</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>{t('askGad.formTitle')}</h2>
           <form onSubmit={submit}>
             {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', color: '#dc2626', fontSize: 13, marginBottom: 12 }}>{error}</div>}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 5 }}>Child's Name</label>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 5 }}>{t('askGad.childName')}</label>
                 <input value={form.childName} onChange={e => setForm(f => ({ ...f, childName: e.target.value }))}
-                  placeholder="e.g. Amina" style={inputStyle} />
+                  placeholder={t('askGad.childNamePlaceholder')} style={inputStyle} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 5 }}>Child's Age</label>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 5 }}>{t('askGad.childAge')}</label>
                 <input value={form.childAge} onChange={e => setForm(f => ({ ...f, childAge: e.target.value }))}
-                  placeholder="e.g. 5 years" style={inputStyle} />
+                  placeholder={t('askGad.childAgePlaceholder')} style={inputStyle} />
               </div>
             </div>
 
             <div style={{ marginBottom: 12 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 5 }}>Subject *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 5 }}>{t('askGad.subject')} *</label>
               <input required value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
-                placeholder="Brief subject of your question" style={inputStyle} />
+                placeholder={t('askGad.subjectPlaceholder')} style={inputStyle} />
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 5 }}>Your Question *</label>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 5 }}>{t('askGad.question')} *</label>
               <textarea required value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
-                placeholder="Describe your question in detail…"
+                placeholder={t('askGad.placeholder')}
                 rows={5} style={{ ...inputStyle, resize: 'vertical' }} />
             </div>
 
             <div style={{ display: 'flex', gap: 10 }}>
               <button type="submit" disabled={submitting}
                 style={{ background: 'var(--green)', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 6, opacity: submitting ? .7 : 1 }}>
-                {submitting ? <><Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> Submitting…</> : <><Send size={14} /> Submit</>}
+                {submitting ? <><Loader size={14} style={{ animation: 'spin 1s linear infinite' }} /> {t('askGad.sending')}</> : <><Send size={14} /> {t('askGad.submitBtn')}</>}
               </button>
               <button type="button" onClick={() => setShowForm(false)}
                 style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 20px', fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>
-                Cancel
+                {t('common.cancel')}
               </button>
             </div>
           </form>
@@ -144,13 +146,13 @@ export default function AskGad() {
       ) : questions.length === 0 ? (
         <div style={{ textAlign: 'center', padding: 48, color: 'var(--muted)' }}>
           <MessageCircle size={36} style={{ margin: '0 auto 12px', opacity: .4 }} />
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>No questions yet</div>
-          <div style={{ fontSize: 14 }}>Click "Ask a question" to get started</div>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>{t('askGad.empty')}</div>
+          <div style={{ fontSize: 14 }}>{t('askGad.emptyDesc')}</div>
         </div>
       ) : (
         <div style={{ display: 'grid', gap: 12 }}>
           {questions.map(q => {
-            const cfg = STATUS_CONFIG[q.status] ?? STATUS_CONFIG.PENDING;
+            const cfg = STATUS_CONFIG_KEYS[q.status] ?? STATUS_CONFIG_KEYS.PENDING;
             const StatusIcon = cfg.icon;
             return (
               <div key={q.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
@@ -158,7 +160,7 @@ export default function AskGad() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
                     <div style={{ fontWeight: 600, fontSize: 15 }}>{q.subject}</div>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600, background: cfg.bg, color: cfg.color, whiteSpace: 'nowrap' }}>
-                      <StatusIcon size={11} /> {cfg.label}
+                      <StatusIcon size={11} /> {t(cfg.tKey)}
                     </span>
                   </div>
                   <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>{q.body}</p>
@@ -166,7 +168,7 @@ export default function AskGad() {
                 </div>
                 {q.response && (
                   <div style={{ borderTop: '1px solid var(--border)', padding: '14px 16px', background: 'var(--green-light)' }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)', marginBottom: 6 }}>Dr. Gad's Response</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)', marginBottom: 6 }}>{t('askGad.response')}</div>
                     <p style={{ fontSize: 13 }}>{q.response}</p>
                   </div>
                 )}

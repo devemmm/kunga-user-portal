@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { progressApi } from '../lib/api.js';
+import { useLang } from '../lib/i18n.jsx';
 import {
   TrendingUp, CheckCircle, Clock, Loader, Award,
   BookOpen, Play, Calendar, Flame, ChevronRight
@@ -50,6 +51,7 @@ function StatCard({ icon: Icon, label, value, color, bg, delay = 0 }) {
 }
 
 export default function Progress() {
+  const { t } = useLang();
   const [items, setItems]   = useState([]);   // raw progress array from API
   const [loading, setLoading] = useState(true);
 
@@ -96,15 +98,15 @@ export default function Progress() {
   if (total === 0) return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div>
-        <div style={{ fontWeight: 800, fontSize: 22, color: 'var(--text)', letterSpacing: -.4 }}>My Progress</div>
-        <div style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>Track your learning journey</div>
+        <div style={{ fontWeight: 800, fontSize: 22, color: 'var(--text)', letterSpacing: -.4 }}>{t('progress.title')}</div>
+        <div style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>{t('progress.subtitle')}</div>
       </div>
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '60px 20px', textAlign: 'center' }}>
         <TrendingUp size={40} style={{ color: 'var(--muted)', margin: '0 auto 16px', opacity: .4 }} />
-        <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)', marginBottom: 6 }}>No progress yet</div>
-        <div style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 20 }}>Start watching modules to track your learning journey here</div>
+        <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)', marginBottom: 6 }}>{t('progress.empty')}</div>
+        <div style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 20 }}>{t('progress.emptyDesc')}</div>
         <Link to="/modules" style={{ background: 'var(--green)', color: '#fff', borderRadius: 20, padding: '10px 24px', fontWeight: 700, fontSize: 14, display: 'inline-block' }}>
-          Browse modules
+          {t('progress.startLearning')}
         </Link>
       </div>
     </div>
@@ -124,10 +126,10 @@ export default function Progress() {
         <div style={{ position:'absolute', top:-40, right:-40, width:160, height:160, borderRadius:'50%', background:'rgba(255,255,255,.06)', pointerEvents:'none' }} />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, position: 'relative', zIndex: 1 }}>
           <div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,.65)', fontWeight: 500, marginBottom: 4 }}>Overall completion</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,.65)', fontWeight: 500, marginBottom: 4 }}>{t('progress.subtitle')}</div>
             <div style={{ fontSize: 44, fontWeight: 800, color: '#fff', lineHeight: 1, letterSpacing: -1 }}>{avgPct}%</div>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,.7)', marginTop: 8 }}>
-              {completed} of {total} module{total !== 1 ? 's' : ''} completed
+              {completed} / {total} {t('progress.modules')} {t('progress.completed')}
             </div>
             {/* Progress bar */}
             <div style={{ marginTop: 14, width: 200, maxWidth: '100%' }}>
@@ -150,9 +152,9 @@ export default function Progress() {
 
       {/* ── Stats grid ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12 }}>
-        <StatCard icon={CheckCircle} label="Completed"   value={completed}  color="var(--green)"  bg="var(--green-light)"  delay={0} />
-        <StatCard icon={Play}        label="In progress" value={inProgress}  color="var(--sky)"    bg="var(--sky-light)"    delay={60} />
-        <StatCard icon={BookOpen}    label="Total"       value={total}       color="var(--purple)" bg="var(--purple-light)" delay={120} />
+        <StatCard icon={CheckCircle} label={t('home.stat.completed')}  value={completed}  color="var(--green)"  bg="var(--green-light)"  delay={0} />
+        <StatCard icon={Play}        label={t('home.stat.inProgress')} value={inProgress}  color="var(--sky)"    bg="var(--sky-light)"    delay={60} />
+        <StatCard icon={BookOpen}    label={t('home.stat.total')}      value={total}       color="var(--purple)" bg="var(--purple-light)" delay={120} />
       </div>
 
       {/* ── Module breakdown ── */}
@@ -193,16 +195,16 @@ export default function Progress() {
                     <div style={{ display: 'flex', gap: 14, marginTop: 8, flexWrap: 'wrap' }}>
                       {done && item.completedAt && (
                         <span style={{ fontSize: 11, color: 'var(--green)', display: 'flex', alignItems: 'center', gap: 3, fontWeight: 600 }}>
-                          <Award size={11} /> Completed {fmt(item.completedAt)}
+                          <Award size={11} /> {t('home.stat.completed')} {fmt(item.completedAt)}
                         </span>
                       )}
                       {!done && started && item.lastWatchedAt && (
                         <span style={{ fontSize: 11, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                          <Clock size={11} /> Last watched {fmt(item.lastWatchedAt)}
+                          <Clock size={11} /> {t('progress.lastWatched')} {fmt(item.lastWatchedAt)}
                         </span>
                       )}
                       {!started && (
-                        <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>Not started yet</span>
+                        <span style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{t('progress.startLearning')}</span>
                       )}
                       {item.module?.code && (
                         <span style={{ fontSize: 11, color: 'var(--muted)', background: 'var(--border-light)', borderRadius: 4, padding: '1px 6px' }}>
@@ -226,10 +228,10 @@ export default function Progress() {
           <div style={{ fontSize: 32 }}>🏆</div>
           <div>
             <div style={{ fontWeight: 700, fontSize: 15, color: '#78350F' }}>
-              {completed === 1 ? 'Great job! 1 module completed' : `Amazing! ${completed} modules completed`}
+              {completed === 1 ? t('progress.great1') : t('progress.great', { n: completed })}
             </div>
             <div style={{ fontSize: 13, color: '#92400E', marginTop: 2 }}>
-              Keep going — you're building great habits for your child
+              {t('progress.keepGoing')}
             </div>
           </div>
         </div>
@@ -246,9 +248,9 @@ export default function Progress() {
             <Flame size={20} style={{ color: 'var(--green)' }} />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 14 }}>Continue learning</div>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>{t('home.continueWatching')}</div>
             <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 1 }}>
-              {inProgress} module{inProgress !== 1 ? 's' : ''} in progress — pick up where you left off
+              {inProgress} {t('progress.modules')} {t('progress.inProgress')} — {t('progress.pickUp')}
             </div>
           </div>
           <ChevronRight size={18} style={{ color: 'var(--muted)' }} />

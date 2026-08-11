@@ -38,12 +38,82 @@
   --font:         -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
 }
 
+/* ── Dark mode tokens ── */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:           #0E150F;
+    --surface:      #161D17;
+    --surface-2:    #1C241D;
+    --border:       #2A3B2D;
+    --border-light: #223025;
+    --text:         #E8F0EA;
+    --text-2:       #B8CCBE;
+    --muted:        #7A9E86;
+    --muted-light:  #4E6B57;
+    --green-light:  #1A3D28;
+    --green-pale:   #142E1E;
+    --gold-light:   #2D2008;
+    --purple-light: #1E1435;
+    --sky-light:    #0A1F2E;
+    --rose-light:   #2D0A12;
+    --shadow-sm:    0 1px 3px rgba(0,0,0,.30);
+    --shadow:       0 2px 8px rgba(0,0,0,.40), 0 1px 2px rgba(0,0,0,.20);
+    --shadow-md:    0 4px 16px rgba(0,0,0,.50), 0 2px 4px rgba(0,0,0,.30);
+    --shadow-lg:    0 12px 32px rgba(0,0,0,.60), 0 4px 8px rgba(0,0,0,.40);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg:           #0E150F;
+  --surface:      #161D17;
+  --surface-2:    #1C241D;
+  --border:       #2A3B2D;
+  --border-light: #223025;
+  --text:         #E8F0EA;
+  --text-2:       #B8CCBE;
+  --muted:        #7A9E86;
+  --muted-light:  #4E6B57;
+  --green-light:  #1A3D28;
+  --green-pale:   #142E1E;
+  --gold-light:   #2D2008;
+  --purple-light: #1E1435;
+  --sky-light:    #0A1F2E;
+  --rose-light:   #2D0A12;
+  --shadow-sm:    0 1px 3px rgba(0,0,0,.30);
+  --shadow:       0 2px 8px rgba(0,0,0,.40), 0 1px 2px rgba(0,0,0,.20);
+  --shadow-md:    0 4px 16px rgba(0,0,0,.50), 0 2px 4px rgba(0,0,0,.30);
+  --shadow-lg:    0 12px 32px rgba(0,0,0,.60), 0 4px 8px rgba(0,0,0,.40);
+}
+
+:root[data-theme="light"] {
+  --bg:           #F4F7F4;
+  --surface:      #FFFFFF;
+  --surface-2:    #F8FBF8;
+  --border:       #E0EAE3;
+  --border-light: #EEF4EF;
+  --text:         #111B14;
+  --text-2:       #374B3E;
+  --muted:        #6B8070;
+  --muted-light:  #9DB5A5;
+  --green-light:  #E8F5EE;
+  --green-pale:   #F0FAF4;
+  --gold-light:   #FEF3C7;
+  --purple-light: #EDE9FE;
+  --sky-light:    #E0F2FE;
+  --rose-light:   #FFE4E6;
+  --shadow-sm:    0 1px 3px rgba(0,0,0,.06);
+  --shadow:       0 2px 8px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:    0 4px 16px rgba(0,0,0,.10), 0 2px 4px rgba(0,0,0,.06);
+  --shadow-lg:    0 12px 32px rgba(0,0,0,.12), 0 4px 8px rgba(0,0,0,.08);
+}
+
 body {
   font-family: var(--font);
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  transition: background .2s, color .2s;
 }
 
 a { color: inherit; text-decoration: none; }

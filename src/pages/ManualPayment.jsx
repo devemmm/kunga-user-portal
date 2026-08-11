@@ -209,8 +209,11 @@ function History({ onNew }) {
 
   useEffect(() => {
     api("/manual-payments/my")
-      .then(d => setItems(d.payments ?? []))
-      .catch(() => {})
+      .then(d => {
+        const list = d?.payments ?? d?.submissions ?? d?.data ?? d;
+        setItems(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setItems([]))
       .finally(() => setLoading(false));
   }, []);
 
@@ -310,7 +313,7 @@ function SubmitForm({ onSuccess }) {
   const [plans, setPlans]         = useState([]);
   const [plan, setPlan]           = useState("");
   const [amount, setAmount]       = useState("");
-  const [currency, setCurrency]   = useState("RWF");
+  const [currency, setCurrency]   = useState("USD");
   const [notes, setNotes]         = useState("");
   const [file, setFile]           = useState(null);
   const [preview, setPreview]     = useState(null);
@@ -334,7 +337,12 @@ function SubmitForm({ onSuccess }) {
     setPlan(FALLBACK_PLANS[0].value);
     // Then try to fetch live plans (may override with server data)
     api("/manual-payments/plans")
-      .then(d => { if (d.plans?.length) { setPlans(d.plans); setPlan(d.plans[0].value); } })
+      .then(d => {
+        if (d.plans?.length) { setPlans(d.plans); setPlan(d.plans[0].value); }
+        // Use the API's preferred currency if provided
+        const apiCurrency = d.currency ?? d.defaultCurrency ?? d.plans?.[0]?.currency;
+        if (apiCurrency) setCurrency(apiCurrency);
+      })
       .catch(() => {}); // fallback already set, so swallow silently
   }, []);
 
@@ -374,7 +382,9 @@ function SubmitForm({ onSuccess }) {
         const err = await result.json().catch(() => ({}));
         throw new Error(err.message || err.error || `Server error ${result.status} — please try again`);
       }
-      onSuccess(await result.json());
+      const data = await result.json();
+      // API may return { payment: {...} } or { submission: {...} } or the object directly
+      onSuccess(data?.payment ?? data?.submission ?? data?.manualPayment ?? data);
     } catch (e) { setError(e.message); }
     finally { setSubmitting(false); }
   };

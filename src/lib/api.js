@@ -74,14 +74,31 @@ async function request(path, opts = {}) {
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 export const authApi = {
-  login: (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password, platform: 'web' }) }),
-  register: (name, email, password) => request('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password, platform: 'web' }) }),
-  googleAuth: (idToken) => request('/auth/google', { method: 'POST', body: JSON.stringify({ idToken, platform: 'web' }) }),
-  forgotPassword: (email) => request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
-  resetPassword: (token, newPassword) => request('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, newPassword }) }),
-  me: () => request('/auth/me'),
-  updateProfile: (data) => request('/auth/me', { method: 'PATCH', body: JSON.stringify(data) }),
-  changePassword: (data) => request('/auth/change-password', { method: 'POST', body: JSON.stringify(data) }),
+  login:           (email, password) => request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password, platform: 'web' }) }),
+  register:        (name, email, password) => request('/auth/register', { method: 'POST', body: JSON.stringify({ name, email, password, platform: 'web' }) }),
+  googleAuth:      (idToken) => request('/auth/google', { method: 'POST', body: JSON.stringify({ idToken, platform: 'web' }) }),
+  forgotPassword:  (email) => request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+  resetPassword:   (token, newPassword) => request('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, newPassword }) }),
+  me:              () => request('/auth/me'),
+  updateProfile:   (data) => request('/auth/me', { method: 'PATCH', body: JSON.stringify(data) }),
+  changePassword:  (data) => request('/auth/change-password', { method: 'POST', body: JSON.stringify(data) }),
+  updatePhoto:     (formData) => request('/auth/me/photo', { method: 'POST', body: formData, headers: {} }),
+  removePhoto:     () => request('/auth/me/photo', { method: 'DELETE' }),
+  // MFA login flow
+  mfaVerify:  (mfaToken, otp) => request('/auth/mfa/verify',  { method: 'POST', body: JSON.stringify({ mfaToken, otp }) }),
+  mfaResend:  (mfaToken)      => request('/auth/mfa/resend',  { method: 'POST', body: JSON.stringify({ mfaToken }) }),
+  // MFA setup (enable)
+  mfaSetupSend:   ()          => request('/auth/mfa/setup/send',   { method: 'POST', body: '{}' }),
+  mfaSetupVerify: (otp)       => request('/auth/mfa/setup/verify', { method: 'POST', body: JSON.stringify({ otp }) }),
+  // MFA disable
+  mfaDisableSend:   ()        => request('/auth/mfa/disable/send',   { method: 'POST', body: '{}' }),
+  mfaDisableVerify: (otp)     => request('/auth/mfa/disable/verify', { method: 'POST', body: JSON.stringify({ otp }) }),
+};
+
+// ── Preferences ───────────────────────────────────────────────────────────────
+export const preferencesApi = {
+  get:    ()     => request('/preferences'),
+  update: (data) => request('/preferences', { method: 'PATCH', body: JSON.stringify(data) }),
 };
 
 // ── Modules ───────────────────────────────────────────────────────────────────
@@ -143,8 +160,22 @@ export const manualPaymentsApi = {
   // submit uses raw fetch (multipart) — handled directly in ManualPayment.jsx
 };
 
+// ── Routine ───────────────────────────────────────────────────────────────────
+export const routineApi = {
+  getDate:    (date)                      => request(`/routine/${date}`),
+  toggle:     (date, category, taskKey, completed) =>
+    request(`/routine/${date}/${category}/${taskKey}`, { method: 'PATCH', body: JSON.stringify({ completed }) }),
+  streak:     ()                          => request('/routine/streak/current'),
+};
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+export const notificationsApi = {
+  list: () => request('/users/me/notifications'),
+};
+
 // ── Announcements ─────────────────────────────────────────────────────────────
 export const announcementsApi = {
-  getActive: () => request('/announcements'),
-  dismiss: (id) => request(`/announcements/${id}/dismiss`, { method: 'POST', body: '{}' }),
+  getActive:   ()    => request('/announcements'),
+  getBanner:   ()    => request('/announcements/active-banner'),
+  dismiss:     (id)  => request(`/announcements/${id}/dismiss`, { method: 'POST', body: '{}' }),
 };

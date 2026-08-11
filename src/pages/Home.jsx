@@ -1,19 +1,51 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
-import { modulesApi, subscriptionsApi, announcementsApi, progressApi } from '../lib/api.js';
+import { modulesApi, subscriptionsApi, announcementsApi, progressApi, routineApi } from '../lib/api.js';
+import { useLang } from '../lib/i18n.jsx';
 import {
   BookOpen, TrendingUp, MessageCircle, Star, ChevronRight,
   Bell, X, ArrowRight, Zap, Lock, Play, Award, Sparkles,
-  Clock, CheckCircle, Target
+  Clock, CheckCircle, Target, CheckSquare, Flame,
 } from 'lucide-react';
 
+const ROUTINE_TASK_KEYS = [
+  { category: 'morning',   taskKey: 'wake_up_routine' },
+  { category: 'morning',   taskKey: 'teeth_brushing' },
+  { category: 'morning',   taskKey: 'dressing' },
+  { category: 'morning',   taskKey: 'breakfast' },
+  { category: 'morning',   taskKey: 'eye_contact_practice' },
+  { category: 'afternoon', taskKey: 'sensory_activities' },
+  { category: 'afternoon', taskKey: 'learning_session' },
+  { category: 'afternoon', taskKey: 'outdoor_time' },
+  { category: 'afternoon', taskKey: 'speech_practice' },
+  { category: 'evening',   taskKey: 'calm_down_routine' },
+  { category: 'evening',   taskKey: 'reading_together' },
+  { category: 'evening',   taskKey: 'bedtime_routine' },
+];
+const TODAY = new Date().toISOString().split('T')[0];
+
+function mergeRoutine(apiEntries = []) {
+  const map = new Map(apiEntries.map(e => [`${e.category}|${e.taskKey}`, e]));
+  return ROUTINE_TASK_KEYS.map(t => ({
+    ...t,
+    completed: map.get(`${t.category}|${t.taskKey}`)?.completed ?? false,
+  }));
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function greeting() {
+const LANG_KEY = { en: 'en', fr: 'fr', kin: 'rw' };
+function loc(base, translations, lang) {
+  if (!translations || lang === 'en') return base;
+  const key = LANG_KEY[lang] ?? lang;
+  return translations[key] ?? translations[lang] ?? base;
+}
+
+function greetingKey() {
   const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (h < 12) return 'home.greeting.morning';
+  if (h < 17) return 'home.greeting.afternoon';
+  return 'home.greeting.evening';
 }
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
@@ -46,8 +78,10 @@ function ProgressRing({ pct = 0, size = 80, stroke = 7, trackColor = 'rgba(255,2
 const ACCENT = ['#1B5E3B','#7C3AED','#0EA5E9','#D97706','#E11D48'];
 
 function ModuleCard({ m, index }) {
+  const { lang } = useLang();
   const accent = ACCENT[index % ACCENT.length];
   const videos = m.videos?.length ?? m.videoCount ?? 0;
+  const title  = loc(m.title, m.titleTranslations, lang);
   return (
     <Link to={`/modules/${m.id}`}
       className="card-lift fade-up"
@@ -74,7 +108,7 @@ function ModuleCard({ m, index }) {
 
       <div style={{ flex: 1, minWidth: 0, padding: '14px 0' }}>
         <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: 8 }}>
-          {m.title}
+          {title}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
           <span style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 3 }}>
@@ -106,10 +140,16 @@ function ModuleCard({ m, index }) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 export default function Home() {
   const { user } = useAuth();
+  const { t } = useLang();
+  const isPremium = ['ACTIVE', 'TRIAL'].includes(user?.subscriptionStatus);
+
   const [modules, setModules]   = useState([]);
   const [announcements, setAnn] = useState([]);
   const [progressItems, setProgressItems] = useState([]);
   const [loading, setLoading]   = useState(true);
+  const [routineTasks, setRoutineTasks] = useState(mergeRoutine([]));
+  const [routineStreak, setRoutineStreak] = useState(0);
+  const [toggling, setToggling] = useState(null);
 
   useEffect(() => {
     Promise.allSettled([
@@ -128,7 +168,33 @@ export default function Home() {
     ]).finally(() => setLoading(false));
   }, []);
 
-  const isPremium    = ['ACTIVE', 'TRIAL'].includes(user?.subscriptionStatus);
+  // Fetch today's routine separately (premium only)
+  useEffect(() => {
+    if (!isPremium) return;
+    routineApi.getDate(TODAY)
+      .then(d => setRoutineTasks(mergeRoutine(d?.entries ?? [])))
+      .catch(() => {});
+    routineApi.streak()
+      .then(d => setRoutineStreak(d?.streak ?? 0))
+      .catch(() => {});
+  }, [isPremium]);
+
+  const toggleRoutineTask = async (task) => {
+    const key = `${task.category}|${task.taskKey}`;
+    const newCompleted = !task.completed;
+    setRoutineTasks(prev => prev.map(t =>
+      t.category === task.category && t.taskKey === task.taskKey ? { ...t, completed: newCompleted } : t
+    ));
+    setToggling(key);
+    try {
+      await routineApi.toggle(TODAY, task.category, task.taskKey, newCompleted);
+    } catch {
+      setRoutineTasks(prev => prev.map(t =>
+        t.category === task.category && t.taskKey === task.taskKey ? { ...t, completed: task.completed } : t
+      ));
+    } finally { setToggling(null); }
+  };
+
   const firstName    = user?.name?.split(' ')[0] ?? 'there';
   const totalModules = progressItems.length;
   const completed    = progressItems.filter(i => i.completed).length;
@@ -218,15 +284,15 @@ export default function Home() {
           {/* Left: greeting */}
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,.55)', fontWeight: 600, letterSpacing: .5, textTransform: 'uppercase', marginBottom: 6 }}>
-              {greeting()}
+              {t(greetingKey())}
             </div>
             <div style={{ fontSize: 28, fontWeight: 800, color: '#fff', letterSpacing: -.6, lineHeight: 1.1 }}>
               {firstName} 👋
             </div>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,.65)', marginTop: 8, lineHeight: 1.55 }}>
               {avgPct > 0
-                ? `You're ${avgPct}% through your learning journey — keep it up!`
-                : "Let's kick off today's learning session"}
+                ? `${avgPct}% — ${t('home.subtitle.premium')}`
+                : t('home.subtitle.free')}
             </div>
 
             {/* CTA */}
@@ -238,7 +304,7 @@ export default function Home() {
                 fontWeight: 700, fontSize: 13,
                 boxShadow: '0 2px 12px rgba(0,0,0,.18)',
               }}>
-                <BookOpen size={13} /> Browse modules
+                <BookOpen size={13} /> {t('nav.modules')}
               </Link>
               {isPremium && (
                 <Link to="/ask-gad" style={{
@@ -248,7 +314,7 @@ export default function Home() {
                   fontWeight: 600, fontSize: 13,
                   border: '1px solid rgba(255,255,255,.22)',
                 }}>
-                  <MessageCircle size={13} /> Ask Dr. Gad
+                  <MessageCircle size={13} /> {t('nav.askGad')}
                 </Link>
               )}
             </div>
@@ -276,9 +342,9 @@ export default function Home() {
         animationDelay: '60ms',
       }}>
         {[
-          { icon: CheckCircle, label: 'Completed', value: completed,   color: 'var(--green)',  bg: 'var(--green-light)' },
-          { icon: Clock,       label: 'In Progress', value: inProgress, color: 'var(--sky)',    bg: 'var(--sky-light)' },
-          { icon: Target,      label: 'Total',      value: totalModules || modules.length, color: 'var(--purple)', bg: 'var(--purple-light)' },
+          { icon: CheckCircle, label: t('home.stat.completed'),  value: completed,   color: 'var(--green)',  bg: 'var(--green-light)' },
+          { icon: Clock,       label: t('home.stat.inProgress'), value: inProgress,  color: 'var(--sky)',    bg: 'var(--sky-light)' },
+          { icon: Target,      label: t('home.stat.total'),      value: totalModules || modules.length, color: 'var(--purple)', bg: 'var(--purple-light)' },
         ].map(({ icon: Icon, label, value, color, bg }, i) => (
           <div key={i} style={{
             padding: '18px 14px',
@@ -294,6 +360,100 @@ export default function Home() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* ── Today's Routine widget ── */}
+      <div className="fade-up" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+        {/* Header */}
+        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 9, background: 'var(--green-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CheckSquare size={15} style={{ color: 'var(--green)' }} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)' }}>{t('routine.title')}</div>
+              {isPremium && routineStreak > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--green)', fontWeight: 600, marginTop: 1 }}>
+                  <Flame size={11} fill="currentColor" /> {routineStreak} {t('routine.streak')}
+                </div>
+              )}
+            </div>
+          </div>
+          <Link to="/routine" style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)', display: 'flex', alignItems: 'center', gap: 3 }}>
+            {t('home.viewAll')} <ChevronRight size={13} />
+          </Link>
+        </div>
+
+        {isPremium ? (
+          <div style={{ padding: '10px 18px' }}>
+            {/* Progress bar */}
+            {(() => {
+              const done  = routineTasks.filter(t => t.completed).length;
+              const total = routineTasks.length;
+              const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
+              return (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500 }}>{done}/{total} {t('routine.tasks')}</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--green)' }}>{pct}%</span>
+                  </div>
+                  <div style={{ height: 6, background: 'var(--border)', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: 'var(--green)', borderRadius: 99, transition: 'width .4s ease' }} />
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Show first 5 tasks inline */}
+            {routineTasks.slice(0, 5).map((task, i) => {
+              const key = `${task.category}|${task.taskKey}`;
+              const isToggling = toggling === key;
+              return (
+                <button key={key}
+                  onClick={() => toggleRoutineTask(task)}
+                  disabled={isToggling}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '9px 0', background: 'none', border: 'none', cursor: 'pointer',
+                    borderBottom: i < 4 ? '1px solid var(--border)' : 'none',
+                    opacity: isToggling ? .6 : 1, textAlign: 'left',
+                  }}
+                >
+                  <div style={{
+                    width: 22, height: 22, borderRadius: 6, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: task.completed ? 'var(--green)' : 'var(--surface)',
+                    border: task.completed ? 'none' : '2px solid var(--border)',
+                    transition: 'all .2s',
+                  }}>
+                    {task.completed && <CheckCircle size={13} color="#fff" strokeWidth={2.5} />}
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: task.completed ? 'var(--muted)' : 'var(--text)', textDecoration: task.completed ? 'line-through' : 'none', flex: 1 }}>
+                    {t(`routine.task.${task.taskKey}`)}
+                  </span>
+                </button>
+              );
+            })}
+
+            {routineTasks.length > 5 && (
+              <Link to="/routine" style={{ display: 'block', textAlign: 'center', padding: '10px 0 4px', fontSize: 12, color: 'var(--green)', fontWeight: 700 }}>
+                +{routineTasks.length - 5} more tasks →
+              </Link>
+            )}
+          </div>
+        ) : (
+          <div style={{ padding: '20px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 11, background: 'var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Lock size={18} style={{ color: 'var(--muted)' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{t('routine.locked')}</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{t('routine.lockedDesc')}</div>
+            </div>
+            <Link to="/payments" style={{ background: 'var(--green)', color: '#fff', borderRadius: 8, padding: '7px 14px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
+              {t('routine.upgrade')}
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* ── Continue where you left off ── */}
@@ -316,7 +476,7 @@ export default function Home() {
 
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--green)', textTransform: 'uppercase', letterSpacing: .6, marginBottom: 3 }}>
-              Continue watching
+              {t('home.continueWatching')}
             </div>
             <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {spotlight.module?.title ?? 'Last module'}
@@ -325,7 +485,7 @@ export default function Home() {
               <div style={{ height: 4, background: 'var(--border)', borderRadius: 2, overflow: 'hidden', marginBottom: 3 }}>
                 <div style={{ height: '100%', width: `${spotlight.watchedPercent ?? 0}%`, background: 'var(--green)', borderRadius: 2, transition: 'width .5s' }} />
               </div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{spotlight.watchedPercent ?? 0}% watched</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 500 }}>{t('progress.watchedPct', { pct: spotlight.watchedPercent ?? 0 })}</div>
             </div>
           </div>
 
@@ -350,8 +510,8 @@ export default function Home() {
               <Sparkles size={18} color="#fff" />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>Unlock Premium Access</div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.72)' }}>All modules · Dr. Gad Q&A · Full progress tracking</div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: '#fff' }}>{t('home.premium.unlock')}</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.72)' }}>{t('home.premium.desc')}</div>
             </div>
           </div>
 
@@ -373,8 +533,8 @@ export default function Home() {
               }}>
                 <Star size={16} color="#7C3AED" />
               </div>
-              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', textAlign: 'center' }}>Pay online</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', lineHeight: 1.4 }}>Card or mobile money</div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', textAlign: 'center' }}>{t('sub.bankCta').split('→')[0].trim()}</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', lineHeight: 1.4 }}>{t('sub.downloadApp').split('.')[0]}</div>
             </Link>
 
             {/* Bank transfer */}
@@ -389,8 +549,8 @@ export default function Home() {
               }}>
                 <ArrowRight size={16} color="#059669" />
               </div>
-              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', textAlign: 'center' }}>Bank transfer</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', lineHeight: 1.4 }}>Upload your receipt</div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)', textAlign: 'center' }}>{t('payments.submitReceipt')}</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', textAlign: 'center', lineHeight: 1.4 }}>{t('sub.cantPay')}</div>
             </Link>
           </div>
         </div>
@@ -400,11 +560,10 @@ export default function Home() {
       <div className="fade-up" style={{ animationDelay: '120ms' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: -.3 }}>Learning Modules</div>
-            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>Expert-led sessions for you and your child</div>
+            <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: -.3 }}>{t('home.modules')}</div>
           </div>
           <Link to="/modules" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--green)', fontWeight: 700 }}>
-            All <ArrowRight size={13} />
+            {t('home.viewAll')} <ArrowRight size={13} />
           </Link>
         </div>
 
@@ -422,7 +581,7 @@ export default function Home() {
 
       {/* ── Bottom quick actions ── */}
       <div className="fade-up" style={{ animationDelay: '160ms' }}>
-        <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: -.3, marginBottom: 12 }}>Quick Actions</div>
+        <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: -.3, marginBottom: 12 }}>{t('home.stat.total')} {t('nav.modules')}</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
 
           <Link to="/progress" style={{
@@ -436,8 +595,8 @@ export default function Home() {
               <TrendingUp size={18} style={{ color: 'var(--purple)' }} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>My Progress</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>Track journey</div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>{t('nav.progress')}</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>{t('progress.subtitle')}</div>
             </div>
           </Link>
 
@@ -460,8 +619,8 @@ export default function Home() {
               <MessageCircle size={18} style={{ color: isPremium ? 'var(--sky)' : 'var(--muted)' }} />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>Ask Dr. Gad</div>
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>{isPremium ? 'Ask anything' : 'Premium only'}</div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>{t('nav.askGad')}</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 1 }}>{isPremium ? t('home.askGad.sub') : t('home.askGad.locked')}</div>
             </div>
           </Link>
 
@@ -479,8 +638,8 @@ export default function Home() {
         }}>
           <div style={{ fontSize: 26 }}>⭐</div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 13, color: '#78350F' }}>Premium member</div>
-            <div style={{ fontSize: 12, color: '#92400E', marginTop: 1 }}>Full access to all content and Dr. Gad Q&A</div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: '#78350F' }}>{t('home.premium.badge')}</div>
+            <div style={{ fontSize: 12, color: '#92400E', marginTop: 1 }}>{t('home.premium.desc')}</div>
           </div>
           <Star size={16} fill="#D97706" color="#D97706" />
         </div>

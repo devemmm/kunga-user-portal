@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
 import { authApi } from '../lib/api.js';
-import { Eye, EyeOff, Loader, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, Loader, ArrowLeft, CheckCircle, Shield } from 'lucide-react';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -216,16 +216,78 @@ const PrimaryBtn = ({ children, loading, disabled, type='submit' }) => (
   </button>
 );
 
+// ── MFA CHALLENGE ─────────────────────────────────────────────────────────────
+function MfaChallenge({ mfaToken, email, onBack, navigate }) {
+  const { completeMfaLogin } = useAuth();
+  const [otp, setOtp]         = useState('');
+  const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent]   = useState(false);
+  const [error, setError]     = useState('');
+
+  const verify = async e => {
+    e.preventDefault();
+    setError(''); setLoading(true);
+    try {
+      const data = await authApi.mfaVerify(mfaToken, otp.trim());
+      await completeMfaLogin(data);
+      navigate('/');
+    } catch (e) { setError(e.message ?? 'Invalid code'); }
+    finally { setLoading(false); }
+  };
+
+  const resend = async () => {
+    setResending(true); setError('');
+    try { await authApi.mfaResend(mfaToken); setResent(true); setTimeout(() => setResent(false), 3000); }
+    catch (e) { setError(e.message ?? 'Failed to resend'); }
+    finally { setResending(false); }
+  };
+
+  return (
+    <div className="auth-view">
+      <div style={{ width:48, height:48, borderRadius:12, background:'#DCFCE7', display:'flex', alignItems:'center', justifyContent:'center', marginBottom:16 }}>
+        <Shield size={24} style={{ color:C.sage }} />
+      </div>
+      <div style={{ fontWeight:700, fontSize:20, marginBottom:6, color:C.bark }}>Two-step verification</div>
+      <p style={{ color:C.muted, fontSize:14, marginBottom:22, lineHeight:1.5 }}>
+        We sent a 6-digit code to <strong style={{ color:C.bark }}>{email}</strong>
+      </p>
+      <form onSubmit={verify}>
+        <Err msg={error} />
+        <Field label="Verification code" value={otp} onChange={e => setOtp(e.target.value)} required autoFocus />
+        <div style={{ height:6 }} />
+        <PrimaryBtn loading={loading}>{loading ? <><Loader size={15} style={{ animation:'spin 1s linear infinite' }}/> Verifying…</> : 'Verify →'}</PrimaryBtn>
+      </form>
+      <div style={{ display:'flex', justifyContent:'space-between', marginTop:16 }}>
+        <button onClick={onBack} style={{ background:'none', border:'none', color:C.muted, fontSize:13, cursor:'pointer', display:'flex', alignItems:'center', gap:5, padding:0 }}>
+          <ArrowLeft size={13}/> Back
+        </button>
+        <button onClick={resend} disabled={resending} style={{ background:'none', border:'none', color:C.sageMid, fontSize:13, fontWeight:600, cursor:'pointer', padding:0 }}>
+          {resent ? '✓ Code resent' : resending ? 'Resending…' : 'Resend code'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── SIGN IN ───────────────────────────────────────────────────────────────────
 function SignIn({ onForgot, navigate }) {
   const { login, googleSignIn } = useAuth();
-  const [form, setForm] = useState({ email:'', password:'' });
-  const [show, setShow] = useState(false);
+  const [form, setForm]   = useState({ email:'', password:'' });
+  const [show, setShow]   = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [mfa, setMfa]     = useState(null); // { mfaToken, email }
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
-  const go = async (fn) => { setError(''); setLoading(true); try { await fn(); navigate('/'); } catch(e) { setError(e.message??'Something went wrong'); } finally { setLoading(false); } };
+  const go = async (fn) => {
+    setError(''); setLoading(true);
+    try { const r = await fn(); if (r?.mfaRequired) { setMfa({ mfaToken: r.mfaToken, email: form.email }); } else { navigate('/'); } }
+    catch(e) { setError(e.message ?? 'Something went wrong'); }
+    finally { setLoading(false); }
+  };
+
+  if (mfa) return <MfaChallenge mfaToken={mfa.mfaToken} email={mfa.email} onBack={() => setMfa(null)} navigate={navigate} />;
 
   return (
     <div className="auth-view">

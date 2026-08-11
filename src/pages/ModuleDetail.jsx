@@ -3,6 +3,14 @@ import { useParams, Link } from 'react-router-dom';
 import { modulesApi, videosApi } from '../lib/api.js';
 import { ArrowLeft, Play, BookmarkPlus, FileText, Loader, CheckCircle, Clock, Lock, ChevronRight } from 'lucide-react';
 import { useAuth } from '../lib/auth.jsx';
+import { useLang } from '../lib/i18n.jsx';
+
+const LANG_KEY = { en: 'en', fr: 'fr', kin: 'rw' };
+function loc(base, translations, lang) {
+  if (!translations || lang === 'en') return base;
+  const key = LANG_KEY[lang] ?? lang;
+  return translations[key] ?? translations[lang] ?? base;
+}
 
 function fmtDuration(secs) {
   if (!secs) return null;
@@ -13,6 +21,7 @@ function fmtDuration(secs) {
 export default function ModuleDetail() {
   const { id } = useParams();
   const { user } = useAuth();
+  const { t, lang } = useLang();
   const [module, setModule]       = useState(null);
   const [resources, setResources] = useState([]);
   const [loading, setLoading]     = useState(true);
@@ -88,7 +97,7 @@ export default function ModuleDetail() {
 
       {/* Back */}
       <Link to="/modules" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--muted)', fontSize: 14, fontWeight: 500 }}>
-        <ArrowLeft size={16} /> Back to Modules
+        <ArrowLeft size={16} /> {t('module.backToModules')}
       </Link>
 
       {/* Module header */}
@@ -96,9 +105,9 @@ export default function ModuleDetail() {
         <div style={{ position:'absolute', top:-30, right:-30, width:120, height:120, borderRadius:'50%', background:'rgba(255,255,255,.06)', pointerEvents:'none' }} />
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>{module.emoji ?? '📚'}</div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: -.4, marginBottom: 8 }}>{module.title}</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: '#fff', letterSpacing: -.4, marginBottom: 8 }}>{loc(module.title, module.titleTranslations, lang)}</h1>
           {module.description && (
-            <p style={{ color: 'rgba(255,255,255,.75)', fontSize: 13.5, lineHeight: 1.6, marginBottom: 12 }}>{module.description}</p>
+            <p style={{ color: 'rgba(255,255,255,.75)', fontSize: 13.5, lineHeight: 1.6, marginBottom: 12 }}>{loc(module.description, module.descriptionTranslations, lang)}</p>
           )}
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 12, color: 'rgba(255,255,255,.7)', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -111,7 +120,7 @@ export default function ModuleDetail() {
             )}
             {module.isPreview && (
               <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(255,255,255,.2)', color: '#fff', borderRadius: 20, padding: '2px 10px' }}>
-                Free preview
+                {t('module.freePreview')}
               </span>
             )}
           </div>
@@ -121,8 +130,8 @@ export default function ModuleDetail() {
       {/* What to expect */}
       {module.whatToExpect && (
         <div className="fade-up" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px 20px' }}>
-          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 6 }}>What you'll learn</div>
-          <p style={{ fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.65 }}>{module.whatToExpect}</p>
+          <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', marginBottom: 6 }}>{t('module.whatYoullLearn')}</div>
+          <p style={{ fontSize: 13.5, color: 'var(--muted)', lineHeight: 1.65 }}>{loc(module.whatToExpect, module.whatToExpectTranslations, lang)}</p>
         </div>
       )}
 
@@ -133,11 +142,11 @@ export default function ModuleDetail() {
             <Lock size={22} color="#fff" />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, color: '#fff', fontSize: 15, marginBottom: 3 }}>Premium content</div>
-            <div style={{ color: 'rgba(255,255,255,.75)', fontSize: 13 }}>Subscribe to access all videos and resources in this module</div>
+            <div style={{ fontWeight: 700, color: '#fff', fontSize: 15, marginBottom: 3 }}>{t('module.premiumContent')}</div>
+            <div style={{ color: 'rgba(255,255,255,.75)', fontSize: 13 }}>{t('module.premiumDesc')}</div>
           </div>
-          <Link to="/profile" style={{ background: '#fff', color: '#7C3AED', borderRadius: 20, padding: '8px 16px', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', flexShrink: 0 }}>
-            Upgrade
+          <Link to="/payments" style={{ background: '#fff', color: '#7C3AED', borderRadius: 20, padding: '8px 16px', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', flexShrink: 0 }}>
+            {t('module.upgrade')}
           </Link>
         </div>
       )}
@@ -152,7 +161,7 @@ export default function ModuleDetail() {
           ) : (
             <div style={{ color: 'rgba(255,255,255,.6)', fontSize: 14, textAlign: 'center', padding: 24 }}>
               <Lock size={28} style={{ margin: '0 auto 10px', opacity: .5 }} />
-              <div>Stream unavailable — video may still be processing</div>
+              <div>{t('module.streamUnavailable')}</div>
             </div>
           )}
         </div>
@@ -162,7 +171,7 @@ export default function ModuleDetail() {
       {videos.length > 0 && (
         <div className="fade-up">
           <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: -.2, marginBottom: 12 }}>
-            Videos <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--muted)' }}>({videos.length})</span>
+            {t('module.videos')} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--muted)' }}>({videos.length})</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {videos.map((v, i) => {
@@ -200,7 +209,7 @@ export default function ModuleDetail() {
                         }}>
                           {Array.from({ length: 6 }).map((_, k) => (
                             <span key={k} style={{ fontSize: 11, fontWeight: 800, color: '#7C3AED', whiteSpace: 'nowrap', letterSpacing: 1, textTransform: 'uppercase' }}>
-                              🔒 Premium only
+                              🔒 {t('module.premiumOnly')}
                             </span>
                           ))}
                         </div>
@@ -214,7 +223,7 @@ export default function ModuleDetail() {
                           boxShadow: '0 2px 8px rgba(124,58,237,.35)',
                           position: 'absolute', top: 8, right: 8,
                         }}>
-                          <Lock size={9} /> Subscribe
+                          <Lock size={9} /> {t('module.subscribe')}
                         </div>
                       </div>
                       {/* Purple tint overlay */}
@@ -238,7 +247,7 @@ export default function ModuleDetail() {
 
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 14, color: isPlaying ? 'var(--green)' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {i + 1}. {v.title}
+                      {i + 1}. {loc(v.title, v.titleTranslations, lang)}
                     </div>
                     <div style={{ display: 'flex', gap: 10, marginTop: 3 }}>
                       {fmtDuration(v.durationSecs) && (
@@ -270,8 +279,8 @@ export default function ModuleDetail() {
       {videos.length === 0 && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '40px 20px', textAlign: 'center' }}>
           <Play size={32} style={{ color: 'var(--muted)', margin: '0 auto 12px', opacity: .4 }} />
-          <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--muted)' }}>No videos yet</div>
-          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4, opacity: .7 }}>Check back soon — content is being added</div>
+          <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--muted)' }}>{t('module.noVideos')}</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4, opacity: .7 }}>{t('module.noVideosDesc')}</div>
         </div>
       )}
 
@@ -279,7 +288,7 @@ export default function ModuleDetail() {
       {resources.length > 0 && (
         <div className="fade-up">
           <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--text)', letterSpacing: -.2, marginBottom: 12 }}>
-            Resources <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--muted)' }}>({resources.length})</span>
+            {t('module.resources')} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--muted)' }}>({resources.length})</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {resources.map(r => (
