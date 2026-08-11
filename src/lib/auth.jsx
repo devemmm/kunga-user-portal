@@ -26,12 +26,14 @@ export function AuthProvider({ children }) {
   const [prefs, setPrefs] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Core session refresh — re-fetches /auth/me and updates user state
+  // Core session refresh — re-fetches /auth/me and updates user state.
+  // /auth/me returns { user, childProfile, subscription, preferences }
+  // so we always extract .user to stay consistent with the login flow.
   const doRefresh = useCallback(async () => {
     if (!isLoggedIn()) return;
     try {
-      const u = await authApi.me();
-      setUser(u);
+      const res = await authApi.me();
+      setUser(res?.user ?? res);
     } catch { /* network error — keep stale state */ }
   }, []);
 
@@ -42,8 +44,12 @@ export function AuthProvider({ children }) {
         authApi.me(),
         preferencesApi.get(),
       ]).then(([userRes, prefsRes]) => {
-        if (userRes.status === 'fulfilled') setUser(userRes.value);
-        else setUser(null);
+        if (userRes.status === 'fulfilled') {
+          // /auth/me returns { user, childProfile, subscription, preferences }
+          // extract .user so the shape matches what login stores
+          const res = userRes.value;
+          setUser(res?.user ?? res);
+        } else setUser(null);
         if (prefsRes.status === 'fulfilled') {
           const p = prefsRes.value?.preferences ?? null;
           setPrefs(p);
@@ -123,7 +129,8 @@ export function AuthProvider({ children }) {
   };
 
   const refreshUser = async () => {
-    const u = await authApi.me();
+    const res = await authApi.me();
+    const u = res?.user ?? res;
     setUser(u);
     return u;
   };
