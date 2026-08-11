@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { authApi, preferencesApi, setToken, getToken, isLoggedIn } from './api.js';
 
 const AuthContext = createContext(null);
@@ -26,6 +26,15 @@ export function AuthProvider({ children }) {
   const [prefs, setPrefs] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Core session refresh — re-fetches /auth/me and updates user state
+  const doRefresh = useCallback(async () => {
+    if (!isLoggedIn()) return;
+    try {
+      const u = await authApi.me();
+      setUser(u);
+    } catch { /* network error — keep stale state */ }
+  }, []);
+
   // On mount: restore session + preferences
   useEffect(() => {
     if (isLoggedIn()) {
@@ -46,6 +55,28 @@ export function AuthProvider({ children }) {
       setLoading(false);
     }
   }, []);
+
+  // Auto-refresh subscription status:
+  // 1. Every 5 minutes while the tab is open
+  // 2. Every time the user switches back to this tab
+  // This ensures subscription changes made in the admin portal
+  // are reflected without requiring a logout/login.
+  const intervalRef = useRef(null);
+  useEffect(() => {
+    const FIVE_MIN = 5 * 60 * 1000;
+
+    intervalRef.current = setInterval(doRefresh, FIVE_MIN);
+
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') doRefresh();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      clearInterval(intervalRef.current);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [doRefresh]);
 
   const _afterLogin = async (data) => {
     setToken(data.accessToken, data.refreshToken);
