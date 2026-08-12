@@ -270,47 +270,88 @@ export default function Modules() {
                 key={m.id}
                 to={locked ? '/payments' : `/modules/${m.id}`}
                 style={{
-                  display: 'flex', gap: 14, background: 'var(--surface)',
-                  border: isDone ? '1px solid #bbf7d0' : '1px solid var(--border)',
-                  borderRadius: 12, padding: '14px 16px', opacity: locked ? .7 : 1,
+                  display: 'flex', flexDirection: 'column', gap: 0,
+                  background: 'var(--surface)',
+                  border: locked ? '1px solid #f59e0b44' : isDone ? '1px solid #bbf7d0' : '1px solid var(--border)',
+                  borderRadius: 12, overflow: 'hidden',
                   textDecoration: 'none', transition: 'box-shadow .15s',
                 }}
               >
-                <ModuleIcon title={m.name ?? m.title ?? ''} isDone={isDone} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--ink)' }}>{title}</div>
-                    {locked && <Lock size={13} style={{ color: 'var(--muted)' }} />}
-                  </div>
-                  {desc && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{desc}</div>}
-
-                  {/* Progress bar */}
-                  {!locked && pct > 0 && (
-                    <div style={{ marginTop: 8, height: 4, borderRadius: 99, background: 'var(--border)', overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: isDone ? '#16a34a' : '#f59e0b', borderRadius: 99, transition: 'width .3s' }} />
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                    <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 500 }}>
-                      {vCount} {t('modules.videos')}
+                {/* Premium banner — shown only when locked */}
+                {locked && (
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '7px 16px',
+                    background: 'linear-gradient(90deg, #f59e0b11 0%, #f9731611 100%)',
+                    borderBottom: '1px solid #f59e0b33',
+                  }}>
+                    <Lock size={12} style={{ color: '#d97706', flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#d97706', flex: 1 }}>
+                      Premium content — unlock to access all videos
                     </span>
-                    {pct > 0 && !isDone && (
-                      <>
-                        <span style={{ fontSize: 12, color: 'var(--muted)' }}>·</span>
-                        <span style={{ fontSize: 12, color: '#d97706', fontWeight: 600 }}>{pct}% done</span>
-                      </>
-                    )}
-                    {isDone && (
-                      <>
-                        <span style={{ fontSize: 12, color: 'var(--muted)' }}>·</span>
-                        <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>Completed</span>
-                      </>
-                    )}
-                    {locked && <span style={{ fontSize: 12, color: 'var(--muted)' }}>· {t('modules.locked')}</span>}
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, color: '#fff',
+                      background: 'linear-gradient(90deg, #f59e0b, #f97316)',
+                      padding: '2px 10px', borderRadius: 99,
+                    }}>Upgrade</span>
                   </div>
+                )}
+
+                {/* Main card row */}
+                <div style={{ display: 'flex', gap: 14, padding: '14px 16px', alignItems: 'center' }}>
+                  {/* Dimmed icon + lock overlay for locked modules */}
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <div style={{ opacity: locked ? 0.5 : 1 }}>
+                      <ModuleIcon title={m.name ?? m.title ?? ''} isDone={isDone} />
+                    </div>
+                    {locked && (
+                      <div style={{
+                        position: 'absolute', inset: 0, borderRadius: 14,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'rgba(0,0,0,.18)',
+                      }}>
+                        <Lock size={18} color="#fff" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--ink)' }}>{title}</div>
+                    {desc && <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{desc}</div>}
+
+                    {/* Progress bar */}
+                    {!locked && pct > 0 && (
+                      <div style={{ marginTop: 8, height: 4, borderRadius: 99, background: 'var(--border)', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${Math.min(pct, 100)}%`, background: isDone ? '#16a34a' : '#f59e0b', borderRadius: 99, transition: 'width .3s' }} />
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                      {locked ? (
+                        <span style={{ fontSize: 12, color: '#d97706', fontWeight: 500 }}>
+                          🔒 Subscribe to see video content
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 500 }}>
+                          {vCount} {t('modules.videos')}
+                        </span>
+                      )}
+                      {!locked && pct > 0 && !isDone && (
+                        <>
+                          <span style={{ fontSize: 12, color: 'var(--muted)' }}>·</span>
+                          <span style={{ fontSize: 12, color: '#d97706', fontWeight: 600 }}>{pct}% done</span>
+                        </>
+                      )}
+                      {!locked && isDone && (
+                        <>
+                          <span style={{ fontSize: 12, color: 'var(--muted)' }}>·</span>
+                          <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 600 }}>✓ Completed</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight size={18} style={{ color: locked ? '#f59e0b' : 'var(--muted)', flexShrink: 0 }} />
                 </div>
-                <ChevronRight size={18} style={{ color: 'var(--muted)', flexShrink: 0, alignSelf: 'center' }} />
               </Link>
             );
           })}
