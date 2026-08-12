@@ -246,6 +246,52 @@ export default function Home() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <style>{`@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}`}</style>
 
+      {/* ── Free Assessment Promotion Banner ── */}
+      {!sessionStorage.getItem('kb_promo_assessment_dismissed') && (
+        <div className="fade-up" style={{
+          background: 'linear-gradient(135deg,#064e3b,#065f46,#047857)',
+          borderRadius: 16, padding: '18px 20px',
+          display: 'flex', alignItems: 'center', gap: 16,
+          boxShadow: '0 4px 20px rgba(6,78,59,.25)',
+          position: 'relative', overflow: 'hidden',
+        }}>
+          {/* decorative blob */}
+          <div style={{ position:'absolute', top:-30, right:-20, width:120, height:120, borderRadius:'50%', background:'rgba(255,255,255,.06)', pointerEvents:'none' }} />
+
+          <div style={{ fontSize: 36, flexShrink: 0 }}>🎁</div>
+
+          <div style={{ flex: 1, minWidth: 0, position: 'relative', zIndex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 800, fontSize: 15, color: '#fff' }}>Free Child Assessment — Limited Time!</span>
+              <span style={{ background: '#fbbf24', color: '#78350f', fontSize: 10, fontWeight: 800, borderRadius: 99, padding: '2px 8px', whiteSpace: 'nowrap' }}>
+                🔥 FREE
+              </span>
+            </div>
+            <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,.80)', lineHeight: 1.55, marginBottom: 12 }}>
+              Get a personalised development profile for your child — including domain scores, strengths, and a recommended program — completely free during our launch promotion.
+            </div>
+            <Link to="/assessment"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: '#fff', color: '#065f46',
+                padding: '8px 16px', borderRadius: 99,
+                fontWeight: 800, fontSize: 13,
+                boxShadow: '0 2px 8px rgba(0,0,0,.15)',
+              }}>
+              Start Free Assessment <ArrowRight size={13} />
+            </Link>
+          </div>
+
+          <button
+            onClick={() => { sessionStorage.setItem('kb_promo_assessment_dismissed', '1'); window.dispatchEvent(new Event('storage')); }}
+            style={{ position: 'absolute', top: 10, right: 12, background: 'rgba(255,255,255,.15)', border: 'none', borderRadius: '50%', width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff', flexShrink: 0 }}
+            title="Dismiss"
+          >
+            <X size={13} />
+          </button>
+        </div>
+      )}
+
       {/* ── Announcements ── */}
       {announcements.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

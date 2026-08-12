@@ -3,7 +3,7 @@
  * Mirrors the mobile ChildAssessmentScreen feature-for-feature.
  */
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth.jsx';
 import { useLang } from '../lib/i18n.jsx';
@@ -439,9 +439,25 @@ export default function ChildAssessment() {
     <div ref={scrollRef} style={{ maxWidth: 700 }}>
 
       {/* Hero */}
-      <div style={{ marginBottom: 20 }}>
+      <div style={{ marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{t('assessment.pageTitle')}</h1>
         <p style={{ fontSize: 14, color: 'var(--muted)', margin: 0 }}>{t('assessment.pageSubtitle')}</p>
+      </div>
+
+      {/* Free promotion pill */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        background: 'var(--green-light)', border: '1.5px solid #16a34a40',
+        borderRadius: 12, padding: '12px 16px', marginBottom: 20,
+      }}>
+        <span style={{ fontSize: 22, flexShrink: 0 }}>🎁</span>
+        <div style={{ flex: 1 }}>
+          <span style={{ fontWeight: 800, fontSize: 13, color: '#14532d' }}>Limited-time promotion — </span>
+          <span style={{ fontSize: 13, color: 'var(--text-2)' }}>this full child assessment is <strong>completely free</strong>. No subscription required.</span>
+        </div>
+        <span style={{ background: '#16a34a', color: '#fff', fontSize: 10, fontWeight: 800, borderRadius: 99, padding: '3px 10px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+          FREE
+        </span>
       </div>
 
       <StepBar step={step} steps={STEPS} />
