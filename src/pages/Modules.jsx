@@ -154,6 +154,7 @@ export default function Modules() {
   const activeFilter = searchParams.get('filter') ?? smartFilter ?? 'all';
 
   const isPremium = ['ACTIVE', 'TRIAL', 'active', 'trial'].includes(user?.subscriptionStatus);
+  const isCancelled = ['CANCELLED', 'EXPIRED', 'cancelled', 'expired'].includes(user?.subscriptionStatus);
 
   useEffect(() => {
     modulesApi.getGroups()
@@ -258,7 +259,7 @@ export default function Modules() {
       ) : (
         <div style={{ display: 'grid', gap: 12 }}>
           {filtered.map(m => {
-            const locked     = m.requiresSubscription && !isPremium;
+            const locked     = m.locked === true;
             const vCount     = m.videos?.length ?? m.videoCount ?? 0;
             const title      = loc(m.title, m.titleTranslations, lang);
             const desc       = loc(m.description, m.descriptionTranslations, lang);
@@ -287,13 +288,15 @@ export default function Modules() {
                   }}>
                     <Lock size={12} style={{ color: '#d97706', flexShrink: 0 }} />
                     <span style={{ fontSize: 12, fontWeight: 600, color: '#d97706', flex: 1 }}>
-                      Premium content — subscribe to access all resources
+                      {isCancelled
+                        ? 'Your subscription has ended — renew to regain access'
+                        : 'Premium content — subscribe to access all resources'}
                     </span>
                     <span style={{
                       fontSize: 11, fontWeight: 700, color: '#fff',
                       background: 'linear-gradient(90deg, #f59e0b, #f97316)',
                       padding: '2px 10px', borderRadius: 99,
-                    }}>Upgrade</span>
+                    }}>{isCancelled ? 'Renew' : 'Upgrade'}</span>
                   </div>
                 )}
 
@@ -329,7 +332,7 @@ export default function Modules() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
                       {locked ? (
                         <span style={{ fontSize: 12, color: '#d97706', fontWeight: 500 }}>
-                          🔒 Subscribe to access this module's resources
+                          {isCancelled ? '🔒 Renew your subscription to regain access' : '🔒 Subscribe to access this module\'s resources'}
                         </span>
                       ) : (
                         <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 500 }}>
