@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import {
   Upload, CheckCircle, Clock, XCircle, ChevronRight,
   AlertCircle, FileText, X, Banknote, ArrowLeft,
-  Smartphone, Building2, Copy, Check,
+  Smartphone, Building2, Copy, Check, RefreshCw,
 } from "lucide-react";
+import { useAuth } from "../lib/auth.jsx";
 
 const BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
 
@@ -70,10 +71,12 @@ function CopyBtn({ value }) {
 
 function BankDetails() {
   const rows = [
-    { label: "Bank",           value: "Bank of Kigali",        copy: false },
-    { label: "Account name",   value: "Kunga Basics Ltd",       copy: true  },
-    { label: "Account no.",    value: "00040-01234567-01",       copy: true  },
+    { label: "Bank",           value: "Bank of Kigali",         copy: false },
+    { label: "Account name",   value: "Kunga Basics Ltd",        copy: true  },
+    { label: "Account no.",    value: "100272233928",            copy: true  },
+    { label: "IBAN",           value: "RW34040100272233928840",  copy: true  },
     { label: "SWIFT / BIC",    value: "BKIGRWRW",               copy: true  },
+    { label: "Currency",       value: "USD",                    copy: false },
   ];
   const mobile = [
     { icon: "📱", label: "MTN MoMo",   value: "*182*8*1*0787000000#" },
@@ -94,7 +97,7 @@ function BankDetails() {
           <Building2 size={17} color="white" />
         </div>
         <div>
-          <div style={{ color: "white", fontWeight: 700, fontSize: 14 }}>Bank transfer details</div>
+          <div style={{ color: "white", fontWeight: 700, fontSize: 14 }}>Bank of Kigali — International Transfer</div>
           <div style={{ color: "rgba(255,255,255,.65)", fontSize: 12 }}>Send your payment to this account</div>
         </div>
       </div>
@@ -204,8 +207,12 @@ function EmptyState({ onNew }) {
 // ─── HISTORY LIST ─────────────────────────────────────────────────────────────
 
 function History({ onNew }) {
+  const { user } = useAuth();
   const [items, setItems]     = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const isActive    = ['ACTIVE', 'TRIAL', 'active', 'trial'].includes(user?.subscriptionStatus);
+  const isCancelled = ['CANCELLED', 'EXPIRED', 'cancelled', 'expired'].includes(user?.subscriptionStatus);
 
   useEffect(() => {
     api("/manual-payments/my")
@@ -233,6 +240,13 @@ function History({ onNew }) {
 
   return (
     <div>
+      {/* Always show bank details */}
+      <BankDetails />
+
+      <div style={{ margin: "20px 0 12px", fontWeight: 700, fontSize: 14, color: "var(--ink)" }}>
+        Your submissions
+      </div>
+
       {/* Pending banner */}
       {hasPending && (
         <div style={{
@@ -289,6 +303,23 @@ function History({ onNew }) {
         })}
       </div>
 
+      {/* Cancelled — subscription ended banner */}
+      {isCancelled && (
+        <div style={{
+          marginTop: 16, background: "#fff7ed", border: "1px solid #fed7aa",
+          borderRadius: 12, padding: "14px 16px",
+          display: "flex", alignItems: "flex-start", gap: 10, fontSize: 13,
+        }}>
+          <RefreshCw size={16} color="#c2410c" style={{ flexShrink: 0, marginTop: 1 }} />
+          <div>
+            <strong style={{ color: "#c2410c" }}>Your subscription has ended</strong>
+            <div style={{ color: "#9a3412", marginTop: 2, lineHeight: 1.5 }}>
+              Transfer the fee again to the bank account above, upload your new receipt and we'll reactivate your account within 24 hours.
+            </div>
+          </div>
+        </div>
+      )}
+
       {!hasPending && (
         <button
           onClick={onNew}
@@ -300,7 +331,10 @@ function History({ onNew }) {
             display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
           }}
         >
-          <Upload size={16} /> Submit another receipt
+          {isCancelled
+            ? <><RefreshCw size={16} /> Renew my subscription</>
+            : <><Upload size={16} /> Submit another receipt</>
+          }
         </button>
       )}
     </div>

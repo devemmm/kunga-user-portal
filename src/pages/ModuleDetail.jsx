@@ -32,13 +32,14 @@ export default function ModuleDetail() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [marking, setMarking] = useState(false);
 
-  const isPremium = ['ACTIVE', 'TRIAL', 'active', 'trial'].includes(user?.subscriptionStatus);
+  const isPremium   = ['ACTIVE', 'TRIAL', 'active', 'trial'].includes(user?.subscriptionStatus);
+  const isCancelled = ['CANCELLED', 'EXPIRED', 'cancelled', 'expired'].includes(user?.subscriptionStatus);
 
   useEffect(() => {
     Promise.all([
       modulesApi.getById(id).then(d => {
         const mod = d.module ?? d;
-        setModule(mod);
+setModule(mod);
         setIsCompleted(mod.isCompleted || mod.completed || (mod.progressPercent ?? 0) >= 90);
       }),
       modulesApi.listResources(id)
@@ -79,7 +80,7 @@ export default function ModuleDetail() {
   useEffect(() => () => clearInterval(progressTimer.current), []);
 
   const playVideo = async (video) => {
-    if (!isPremium && !module?.isPreview) return;
+    if (!isPremium && module?.requiresSubscription !== false && !video?.isPreviewClip) return;
     setPlayingVideo(video);
     setStreamUrl('');
     setStreamLoading(true);
@@ -134,7 +135,8 @@ export default function ModuleDetail() {
   );
 
   const videos    = module.videos ?? [];
-  const canAccess = isPremium || module.isPreview;
+  // canAccess = user has active sub, OR module itself is free (locked=false from API, requiresSubscription=false)
+  const canAccess = isPremium || module.requiresSubscription === false || module.locked === false;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -163,7 +165,7 @@ export default function ModuleDetail() {
                 <FileText size={12} /> {resources.length} resource{resources.length !== 1 ? 's' : ''}
               </span>
             )}
-            {module.isPreview && (
+            {module.requiresSubscription === false && (
               <span style={{ fontSize: 11, fontWeight: 700, background: 'rgba(255,255,255,.2)', color: '#fff', borderRadius: 20, padding: '2px 10px' }}>
                 {t('module.freePreview')}
               </span>
@@ -187,11 +189,17 @@ export default function ModuleDetail() {
             <Lock size={22} color="#fff" />
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, color: '#fff', fontSize: 15, marginBottom: 3 }}>{t('module.premiumContent')}</div>
-            <div style={{ color: 'rgba(255,255,255,.75)', fontSize: 13 }}>{t('module.premiumDesc')}</div>
+            <div style={{ fontWeight: 700, color: '#fff', fontSize: 15, marginBottom: 3 }}>
+              {isCancelled ? 'Subscription ended' : t('module.premiumContent')}
+            </div>
+            <div style={{ color: 'rgba(255,255,255,.75)', fontSize: 13 }}>
+              {isCancelled
+                ? 'Renew your subscription to regain full access to this module.'
+                : t('module.premiumDesc')}
+            </div>
           </div>
           <Link to="/payments" style={{ background: '#fff', color: '#7C3AED', borderRadius: 20, padding: '8px 16px', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', flexShrink: 0 }}>
-            {t('module.upgrade')}
+            {isCancelled ? 'Renew' : t('module.upgrade')}
           </Link>
         </div>
       )}
@@ -254,7 +262,8 @@ export default function ModuleDetail() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {videos.map((v, i) => {
               const isPlaying = playingVideo?.id === v.id;
-              const isLocked  = !canAccess;
+              // A video is locked only when the module is locked AND it's not a free preview clip
+              const isLocked  = !canAccess && !v.isPreviewClip;
               return (
                 <div key={v.id} onClick={() => !isLocked && playVideo(v)}
                   className="card-lift"
