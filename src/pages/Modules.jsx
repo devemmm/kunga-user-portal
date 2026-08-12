@@ -287,7 +287,7 @@ export default function Modules() {
                   }}>
                     <Lock size={12} style={{ color: '#d97706', flexShrink: 0 }} />
                     <span style={{ fontSize: 12, fontWeight: 600, color: '#d97706', flex: 1 }}>
-                      Premium content — unlock to access all videos
+                      Premium content — subscribe to access all resources
                     </span>
                     <span style={{
                       fontSize: 11, fontWeight: 700, color: '#fff',
@@ -329,7 +329,7 @@ export default function Modules() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
                       {locked ? (
                         <span style={{ fontSize: 12, color: '#d97706', fontWeight: 500 }}>
-                          🔒 Subscribe to see video content
+                          🔒 Subscribe to access this module's resources
                         </span>
                       ) : (
                         <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 500 }}>
