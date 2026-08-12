@@ -2,10 +2,10 @@ import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../lib/auth.jsx';
 import { useTheme } from '../lib/theme.jsx';
 import { useLang, SUPPORTED_LANGS } from '../lib/i18n.jsx';
-import { authApi } from '../lib/api.js';
+import { authApi, logout } from '../lib/api.js';
 import {
   Sun, Moon, Monitor, CheckCircle, Loader,
-  Shield, ShieldCheck, ShieldOff, Lock, Eye, EyeOff,
+  Shield, ShieldCheck, ShieldOff, Lock, Eye, EyeOff, LogOut,
 } from 'lucide-react';
 
 // ─── SHARED ATOMS ─────────────────────────────────────────────────────────────
@@ -432,6 +432,19 @@ export default function Settings() {
           </div>
         </Card>
       </div>
+
+      {/* ── Sign Out ── */}
+      <button
+        onClick={() => logout()}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          padding: '13px 20px', borderRadius: 12, marginTop: 8,
+          border: '1.5px solid #fca5a5', background: '#fff1f2',
+          color: '#dc2626', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+        }}
+      >
+        <LogOut size={16} /> {t('nav.signOut')}
+      </button>
 
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>

@@ -16,6 +16,7 @@ import Settings from './pages/Settings.jsx';
 import ManualPayment from './pages/ManualPayment.jsx';
 import TodaysRoutine from './pages/TodaysRoutine.jsx';
 import Notifications from './pages/Notifications.jsx';
+import DailyRoutineModal from './components/DailyRoutineModal.jsx';
 import MilestoneReport from './pages/MilestoneReport.jsx';
 import ChildAssessment from './pages/ChildAssessment.jsx';
 
@@ -27,7 +28,7 @@ function PrivateRoute({ children }) {
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
     </div>
   );
-  return user ? <Layout>{children}</Layout> : <Navigate to="/login" replace />;
+  return user ? <><DailyRoutineModal /><Layout>{children}</Layout></> : <Navigate to="/login" replace />;
 }
 
 export default function App() {

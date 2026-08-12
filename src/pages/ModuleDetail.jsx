@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { modulesApi, videosApi } from '../lib/api.js';
+import { modulesApi, videosApi, progressApi } from '../lib/api.js';
 import { ArrowLeft, Play, BookmarkPlus, FileText, Loader, CheckCircle, Clock, Lock, ChevronRight } from 'lucide-react';
 import { useAuth } from '../lib/auth.jsx';
 import { useLang } from '../lib/i18n.jsx';
@@ -29,19 +29,54 @@ export default function ModuleDetail() {
   const [streamUrl, setStreamUrl]       = useState('');
   const [streamLoading, setStreamLoading] = useState(false);
   const [bookmarked, setBookmarked] = useState({});
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [marking, setMarking] = useState(false);
 
   const isPremium = ['ACTIVE', 'TRIAL', 'active', 'trial'].includes(user?.subscriptionStatus);
 
   useEffect(() => {
     Promise.all([
-      modulesApi.getById(id).then(d => setModule(d.module ?? d)),
+      modulesApi.getById(id).then(d => {
+        const mod = d.module ?? d;
+        setModule(mod);
+        setIsCompleted(mod.isCompleted || mod.completed || (mod.progressPercent ?? 0) >= 90);
+      }),
       modulesApi.listResources(id)
         .then(d => setResources(Array.isArray(d) ? d : (d?.resources ?? [])))
         .catch(() => {}),
     ]).finally(() => setLoading(false));
   }, [id]);
 
-  const videoRef = useRef(null);
+  const videoRef       = useRef(null);
+  const progressTimer  = useRef(null);
+  const lastReported   = useRef(0);
+
+  // Report progress every 10 seconds while video is playing
+  const reportProgress = (pct) => {
+    const rounded = Math.round(pct);
+    if (rounded <= lastReported.current) return;
+    lastReported.current = rounded;
+    if (rounded >= 90) {
+      progressApi.markComplete(id).then(() => setIsCompleted(true)).catch(() => {});
+    } else {
+      progressApi.updateProgress(id, rounded).catch(() => {});
+    }
+  };
+
+  const onTimeUpdate = () => {
+    const el = videoRef.current;
+    if (!el || !el.duration) return;
+    const pct = (el.currentTime / el.duration) * 100;
+    reportProgress(pct);
+  };
+
+  const onVideoEnded = () => {
+    reportProgress(100);
+    setIsCompleted(true);
+  };
+
+  // Clean up interval on unmount
+  useEffect(() => () => clearInterval(progressTimer.current), []);
 
   const playVideo = async (video) => {
     if (!isPremium && !module?.isPreview) return;
@@ -67,6 +102,16 @@ export default function ModuleDetail() {
     } finally {
       setStreamLoading(false);
     }
+  };
+
+  const markComplete = async () => {
+    if (marking || isCompleted) return;
+    setMarking(true);
+    try {
+      await progressApi.markComplete(id);
+      setIsCompleted(true);
+    } catch {}
+    finally { setMarking(false); }
   };
 
   const toggleBookmark = async (videoId, e) => {
@@ -151,13 +196,46 @@ export default function ModuleDetail() {
         </div>
       )}
 
+      {/* Mark as Completed / Completed banner */}
+      {canAccess && (
+        isCompleted ? (
+          <div className="fade-up" style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            background: 'var(--green-light)', border: '1.5px solid var(--green)',
+            borderRadius: 'var(--radius)', padding: '14px 18px',
+          }}>
+            <CheckCircle size={22} style={{ color: 'var(--green)', flexShrink: 0 }} />
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--green)' }}>{t('moduleDetail.moduleCompleted')}</div>
+              <div style={{ fontSize: 12.5, color: 'var(--green)', opacity: .75, marginTop: 2 }}>{t('moduleDetail.completedDesc') || 'Great work! This module is marked as complete.'}</div>
+            </div>
+          </div>
+        ) : (
+          <button onClick={markComplete} disabled={marking} className="fade-up" style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            width: '100%', padding: '13px 20px',
+            background: marking ? 'var(--border)' : 'var(--green)',
+            color: marking ? 'var(--muted)' : '#fff',
+            border: 'none', borderRadius: 'var(--radius)',
+            fontWeight: 700, fontSize: 15, cursor: marking ? 'not-allowed' : 'pointer',
+            transition: 'all .15s',
+          }}>
+            <CheckCircle size={17} />
+            {marking ? 'Saving…' : t('moduleDetail.markComplete')}
+          </button>
+        )
+      )}
+
       {/* Video player */}
       {playingVideo && (
         <div className="scale-in" style={{ background: '#000', borderRadius: 'var(--radius)', overflow: 'hidden', aspectRatio: '16/9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {streamLoading ? (
             <Loader size={32} style={{ color: '#fff', animation: 'spin 1s linear infinite' }} />
           ) : streamUrl ? (
-            <video ref={videoRef} src={streamUrl} controls autoPlay style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            <video ref={videoRef} src={streamUrl} controls autoPlay
+              onTimeUpdate={onTimeUpdate}
+              onEnded={onVideoEnded}
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           ) : (
             <div style={{ color: 'rgba(255,255,255,.6)', fontSize: 14, textAlign: 'center', padding: 24 }}>
               <Lock size={28} style={{ margin: '0 auto 10px', opacity: .5 }} />

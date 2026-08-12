@@ -48,10 +48,12 @@ async function silentRefresh() {
 }
 
 async function request(path, opts = {}) {
+  const isFormData = opts.body instanceof FormData;
   const doFetch = (token) => fetch(`${BASE}${path}`, {
     ...opts,
     headers: {
-      'Content-Type': 'application/json',
+      // Skip Content-Type for FormData — browser sets it with the multipart boundary
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       'X-Platform': 'web',
       ...opts.headers,
@@ -66,7 +68,8 @@ async function request(path, opts = {}) {
   }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }));
-    throw Object.assign(new Error(err.message ?? 'Request failed'), { status: res.status, data: err });
+    const msg = err.message ?? err.error ?? err.msg ?? 'Request failed';
+    throw Object.assign(new Error(msg), { status: res.status, data: err });
   }
   if (res.status === 204) return null;
   return res.json();
@@ -82,8 +85,8 @@ export const authApi = {
   me:              () => request('/auth/me'),
   updateProfile:   (data) => request('/auth/me', { method: 'PATCH', body: JSON.stringify(data) }),
   changePassword:  (data) => request('/auth/change-password', { method: 'POST', body: JSON.stringify(data) }),
-  updatePhoto:     (formData) => request('/auth/me/photo', { method: 'POST', body: formData, headers: {} }),
-  removePhoto:     () => request('/auth/me/photo', { method: 'DELETE' }),
+  updatePhoto:     (formData) => request('/auth/avatar', { method: 'POST', body: formData }),
+  removePhoto:     () => request('/auth/me', { method: 'PATCH', body: JSON.stringify({ avatarUrl: null }) }),
   // MFA login flow
   mfaVerify:  (mfaToken, otp) => request('/auth/mfa/verify',  { method: 'POST', body: JSON.stringify({ mfaToken, otp }) }),
   mfaResend:  (mfaToken)      => request('/auth/mfa/resend',  { method: 'POST', body: JSON.stringify({ mfaToken }) }),
@@ -127,6 +130,8 @@ export const videosApi = {
 export const progressApi = {
   get: () => request('/progress'),
   update: (data) => request('/progress', { method: 'POST', body: JSON.stringify(data) }),
+  updateProgress: (moduleId, watchedPercent) => request(`/progress/${moduleId}`, { method: 'POST', body: JSON.stringify({ watchedPercent }) }),
+  markComplete: (moduleId) => request(`/progress/${moduleId}`, { method: 'POST', body: JSON.stringify({ completed: true, watchedPercent: 100 }) }),
 };
 
 // ── Assessments ───────────────────────────────────────────────────────────────
@@ -201,6 +206,8 @@ export const routineApi = {
 // ── Users ─────────────────────────────────────────────────────────────────────
 export const usersApi = {
   getProgressSummary: () => request('/users/me/progress-summary'),
+  getActivity:        () => request('/users/me/activity'),
+  upsertChildProfile: (data) => request('/users/me/child-profile', { method: 'POST', body: JSON.stringify(data) }),
 };
 
 // ── Milestones ────────────────────────────────────────────────────────────────

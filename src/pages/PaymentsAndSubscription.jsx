@@ -246,7 +246,7 @@ export default function Payments() {
       .finally(() => setMpLoading(false));
 
     subscriptionsApi.getStatus()
-      .then(setSub)
+      .then(d => setSub(d?.subscription ?? d))
       .catch(() => {})
       .finally(() => setSubLoading(false));
   }, []);
